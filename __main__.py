@@ -18,7 +18,7 @@ def connect_handler(id, data):
 
 
 @sio.on('identify')
-async def identify_handler(id, data):
+async def identification_handler(id, data):
     print('')
     print('< identify', data)
     if any(data.get('doubleName') in user.get('double_name') for user in users):
@@ -28,17 +28,17 @@ async def identify_handler(id, data):
         print('> sending namenotknown')
         await sio.emit('namenotknown')
         print('- Adding to array')
-        users.append({'double_name': data.get('doubleName'),
-                      'public_key': data.get('privateKey')})
+        users.append({'double_name': data.get('doubleName')})
     print('')
 
 
 
-@sio.on('addkey')
-async def addkey_handler(id, data):
+@sio.on('register')
+async def registration_handler(id, data):
     print('')
-    print('< addkey', data)
-    
+    print('< register', data)
+    user = next(user for user in users if user.get('double_name') == data.get('doubleName'))
+    print(user)
     # TODO: Add publickey to user in array
 
     print('')
