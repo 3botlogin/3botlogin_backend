@@ -6,10 +6,41 @@ sio = socketio.AsyncServer()
 app = web.Application()
 sio.attach(app)
 
-def connect_handler(id, msg):
-    print(f'> Someone connected: {id}')
+users = [{
+    'double_name': 'ivan.coene',
+    'public_key': 'abc123'
+}]
 
 
-sio.on('connect', connect_handler)
+@sio.on('connect')
+def connect_handler(id, data):
+    print('Connected!')
+
+
+@sio.on('identify')
+async def identify_handler(id, data):
+    print('')
+    print('< identify', data)
+    if any(data.get('doubleName') in user.get('double_name') for user in users):
+        print('> sending nameknown')
+        await sio.emit('nameknown')
+    else:
+        print('> sending namenotknown')
+        await sio.emit('namenotknown')
+        print('- Adding to array')
+        users.append({'double_name': data.get('doubleName'),
+                      'public_key': data.get('privateKey')})
+    print('')
+
+
+
+@sio.on('addkey')
+async def addkey_handler(id, data):
+    print('')
+    print('< addkey', data)
+    
+    # TODO: Add publickey to user in array
+
+    print('')
 
 web.run_app(app)
