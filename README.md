@@ -18,6 +18,7 @@ When a user tries to log in, an entry is added
 | stateHash | String | 1gcbyeTnR2iZSfx6r2qIuvhH8 | The "identifier" of a login-attempt |
 | timeStamp | Datetime | 2002-12-25 00:00:00-06:39 | The time when this satehash came in |
 | scanned | Boolean | false | Flag to keep the QR-scanned state |
+| singedStateHash | String | 1gcbyeTnR2iZSfx6r2qIuvhH8 | The signed version of the state hash|
 
 ## Run in dev mode
 To run the backend in devmode simply execute following command
