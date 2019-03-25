@@ -4,6 +4,7 @@ The (temporary) backend for 3Bot login.
 ## Data to save
 ### User
 A user is someone that authenticates using 3botlogin.
+
 | Key | Type | Example | Description |
 | --- | --- | --- | --- |
 | doubleName | String | ivan.coene | The name of the user (case insensitive) | 
@@ -12,6 +13,7 @@ A user is someone that authenticates using 3botlogin.
 
 ### Login attempt
 When a user tries to log in, an entry is added
+
 | Key | Type | Example | Description |
 | --- | --- | --- | --- |
 | doubleName | String | ivan.coene | The name of the user (case insensitive) | 
