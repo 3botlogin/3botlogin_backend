@@ -9,7 +9,13 @@ import nacl.encoding
 import binascii
 import struct
 import base64
+from pyfcm import FCMNotification
+import configparser
 
+config = configparser.ConfigParser()
+config.read('config.ini')
+
+push_service = FCMNotification(api_key=config['API_KEY'])
 app = Flask(__name__)
 sio = SocketIO(app)
 CORS(app, resources=r'/api/*')
@@ -82,8 +88,8 @@ def login_handler(data):
     })
     print(find_loggin_attempt(data.get('state')))
     print(login_attempts)
-    # if !data.get('firstTime')
-    #     # TODO: send notification
+    if !data.get('firstTime')
+        # TODO: send notification
     print('')
 
 # TOOD: Register deviceID for user
@@ -96,6 +102,7 @@ def flag_handler():
     if user:
         print('user', user)
         user['scanned'] = True
+        user['device_id'] = body.get('deviceId')
         sio.emit('scannedFlag', room=user.get('sid'))
         return Response("Ok")
     else: 

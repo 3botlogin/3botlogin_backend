@@ -9,6 +9,7 @@ A user is someone that authenticates using 3botlogin.
 | --- | --- | --- | --- |
 | double_name | String | ivan.coene | The name of the user (case insensitive) | 
 | public_key | string | G1gcbyeTnR2i...H8_3yV3cuF | The public key of the user to verify access |
+| device_id | String | abc | The ID of the device where we can send notifications to | 
 
 
 ### Login attempt
