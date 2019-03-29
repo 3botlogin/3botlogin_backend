@@ -3,7 +3,7 @@ from flask import Flask, Response, request
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 import datetime
-from datetime import timedelta  
+from datetime import timedelta
 import nacl.signing
 import nacl.encoding
 import binascii
@@ -15,7 +15,7 @@ import configparser
 config = configparser.ConfigParser()
 config.read('config.ini')
 
-push_service = FCMNotification(api_key=config['API_KEY'])
+push_service = FCMNotification(api_key=config['DEFAULT']['API_KEY'])
 app = Flask(__name__)
 sio = SocketIO(app)
 CORS(app, resources=r'/api/*')
@@ -88,24 +88,24 @@ def login_handler(data):
     })
     print(find_loggin_attempt(data.get('state')))
     print(login_attempts)
-    if !data.get('firstTime')
-        # TODO: send notification
+    if data.get('firstTime') == False:
+        user = find_user(data.get('doubleName'))
+        push_service.notify_single_device(registration_id=user.get('device_id'), message_title='Finish login', message_body='Tap to finish login', data_message={ 'hash': data.get('state') }, click_action='FLUTTER_NOTIFICATION_CLICK' )
     print('')
 
-# TOOD: Register deviceID for user
 @app.route('/api/flag', methods=['POST'])
 def flag_handler():
     print('')
     body = request.get_json()
     print('< flag', body)
-    user = find_loggin_attempt(body.get('hash'))
-    if user:
-        print('user', user)
-        user['scanned'] = True
+    loggin_attempt = find_loggin_attempt(body.get('hash'))
+    if loggin_attempt:
+        user = find_user(loggin_attempt.get('double_name'))
+        loggin_attempt['scanned'] = True
         user['device_id'] = body.get('deviceId')
-        sio.emit('scannedFlag', room=user.get('sid'))
+        sio.emit('scannedFlag', room=loggin_attempt.get('sid'))
         return Response("Ok")
-    else: 
+    else:
         return Response('User not found', status=404)
 
 
@@ -121,6 +121,7 @@ def sign_handler():
         sio.emit('signed', body.get('signedHash'), room=user.get('sio'))
     return Response("Ok")
 
+
 @app.route('/api/verify', methods=['POST'])
 def verify_handler():
     print('')
@@ -133,12 +134,14 @@ def verify_handler():
         max_datetime = requested_datetime + timedelta(minutes=10)
         if requested_datetime < max_datetime:
             public_key = base64.b64decode(user.get('public_key'))
-            signed_hash = base64.b64decode(login_attempt.get('singed_statehash'))
+            signed_hash = base64.b64decode(
+                login_attempt.get('singed_statehash'))
             original_hash = login_attempt.get('state')
             try:
                 bytes_signed_hash = bytes(signed_hash)
                 bytes_original_hash = bytes(original_hash, encoding='utf8')
-                verify_key = nacl.signing.VerifyKey(public_key.hex(), encoder=nacl.encoding.HexEncoder)
+                verify_key = nacl.signing.VerifyKey(
+                    public_key.hex(), encoder=nacl.encoding.HexEncoder)
                 verify_key.verify(bytes_original_hash, bytes_signed_hash)
                 return Response("Ok")
             except:
