@@ -178,3 +178,5 @@ dmypy.json
 .history
 
 # End of https://www.gitignore.io/api/macos,linux,python,visualstudiocode
+
+config.ini
