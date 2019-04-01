@@ -104,6 +104,8 @@ def login_handler(data):
         user = find_user(data.get('doubleName'))
         push_service.notify_single_device(registration_id=user.get('device_id'), message_title='Finish login', message_body='Tap to finish login', data_message={ 'hash': data.get('state') }, click_action='FLUTTER_NOTIFICATION_CLICK' )
     print('')
+    insert_auth_sql="INSERT INTO auth (double_name,state_hash,timestamp,scanned) VALUES ("+login_attempts["double_name"]+","+login_attempts["state"]+","+login_attempts["timestamp"]+","+login_attempts["scanned"]+");"
+    db.insert_user(conn,insert_auth_sql)
 
 @app.route('/api/flag', methods=['POST'])
 def flag_handler():
@@ -116,6 +118,8 @@ def flag_handler():
         loggin_attempt['scanned'] = True
         user['device_id'] = body.get('deviceId')
         sio.emit('scannedFlag', room=loggin_attempt.get('sid'))
+        insert_user_sql="INSERT INTO users (device_id) VALUES ("+user["device_id"]+") WHERE double_name="+user["double+name"]+";"
+        db.insert_user(conn,insert_user_sql)
         return Response("Ok")
     else:
         return Response('User not found', status=404)
@@ -131,6 +135,8 @@ def sign_handler():
         print('user', user)
         user['singed_statehash'] = body.get('signedHash')
         sio.emit('signed', body.get('signedHash'), room=user.get('sio'))
+        insert_auth_sql="INSERT INTO auth (singed_statehash) VALUES ("+user["singed_statehash"]+") WHERE double_name="+user["double+name"]+";"
+        db.insert_user(conn,insert_auth_sql)
     return Response("Ok")
 
 
@@ -165,4 +171,4 @@ def verify_handler():
         return Response("Oops.. user or loggin attempt not found", status=404)
 
 
-app.run(host='0.0.0.0', port=5000)
+app.run(host='0.0.0.0', port=5005)
