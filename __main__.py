@@ -84,7 +84,7 @@ def registration_handler(data):
     user['public_key'] = data.get('publicKey')
     user['email'] = data.get('email')
     print('')
-    insert_user_sql = "INSERT INTO users (double_name,email,public_key) VALUES ("+user.get("doubleName")+","+user.get("email")+","+user.get("publicKey")+");"
+    insert_user_sql = "INSERT INTO users (double_name,email,public_key) VALUES ("+user.get("double_name")+","+user.get("email")+","+user.get("public_key")+");"
     db.insert_user(conn,insert_user_sql)
 
 
@@ -165,4 +165,4 @@ def verify_handler():
         return Response("Oops.. user or loggin attempt not found", status=404)
 
 
-app.run(host='0.0.0.0', port=5005)
+app.run(host='0.0.0.0', port=5000)

@@ -31,6 +31,6 @@ python3 .
 ```
 ## SQLite
 
-pip install sqlite 
+pip install pysqlite 
 
 sudo apt get install sqlite3
