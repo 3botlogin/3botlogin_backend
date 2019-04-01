@@ -28,3 +28,7 @@ To run the backend in devmode simply execute following command
 ```
 python3 .
 ```
+## SQLite
+
+pip install sqlite
+sudo apt get install sqlite3
