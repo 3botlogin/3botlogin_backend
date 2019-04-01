@@ -8,6 +8,7 @@ A user is someone that authenticates using 3botlogin.
 | Key | Type | Example | Description |
 | --- | --- | --- | --- |
 | double_name | String | ivan.coene | The name of the user (case insensitive) | 
+| email | String | ivan.coene@gmail.com | The email of the user (case insensitive) | 
 | public_key | string | G1gcbyeTnR2i...H8_3yV3cuF | The public key of the user to verify access |
 | device_id | String | abc | The ID of the device where we can send notifications to | 
 
@@ -28,3 +29,8 @@ To run the backend in devmode simply execute following command
 ```
 python3 .
 ```
+## SQLite
+
+pip install pysqlite 
+
+sudo apt get install sqlite3

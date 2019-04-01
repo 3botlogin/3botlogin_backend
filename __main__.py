@@ -11,6 +11,16 @@ import struct
 import base64
 from pyfcm import FCMNotification
 import configparser
+import database as db
+
+#database init
+conn = db.create_connection("pythonsqlite.db") #connection
+db.create_db(conn) # create tables
+#test
+# insert_user_sql = """INSERT INTO users (double_name,email,public_key,device_id) VALUES ('massimo.renson','massimo.renson@hotmail.com','G1gcbyeTnR2i...H8_3yV3cuF','abc');"""
+# db.insert_user(conn,insert_user_sql)
+# select_all_users = """SELECT * FROM users;"""
+# db.select_all(conn,select_all_users)
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -74,6 +84,8 @@ def registration_handler(data):
     user['public_key'] = data.get('publicKey')
     user['email'] = data.get('email')
     print('')
+    insert_user_sql = "INSERT INTO users (double_name,email,public_key) VALUES ("+user.get("double_name")+","+user.get("email")+","+user.get("public_key")+");"
+    db.insert_user(conn,insert_user_sql)
 
 
 @sio.on('login')
@@ -92,6 +104,8 @@ def login_handler(data):
         user = find_user(data.get('doubleName'))
         push_service.notify_single_device(registration_id=user.get('device_id'), message_title='Finish login', message_body='Tap to finish login', data_message={ 'hash': data.get('state') }, click_action='FLUTTER_NOTIFICATION_CLICK' )
     print('')
+    insert_auth_sql="INSERT INTO auth (double_name,state_hash,timestamp,scanned) VALUES ("+login_attempts["double_name"]+","+login_attempts["state"]+","+login_attempts["timestamp"]+","+login_attempts["scanned"]+");"
+    db.insert_user(conn,insert_auth_sql)
 
 @app.route('/api/flag', methods=['POST'])
 def flag_handler():
@@ -104,6 +118,8 @@ def flag_handler():
         loggin_attempt['scanned'] = True
         user['device_id'] = body.get('deviceId')
         sio.emit('scannedFlag', room=loggin_attempt.get('sid'))
+        insert_user_sql="INSERT INTO users (device_id) VALUES ("+user["device_id"]+") WHERE double_name="+user["double+name"]+";"
+        db.insert_user(conn,insert_user_sql)
         return Response("Ok")
     else:
         return Response('User not found', status=404)
@@ -119,6 +135,8 @@ def sign_handler():
         print('user', user)
         user['singed_statehash'] = body.get('signedHash')
         sio.emit('signed', body.get('signedHash'), room=user.get('sio'))
+        insert_auth_sql="INSERT INTO auth (singed_statehash) VALUES ("+user["singed_statehash"]+") WHERE double_name="+user["double+name"]+";"
+        db.insert_user(conn,insert_auth_sql)
     return Response("Ok")
 
 
