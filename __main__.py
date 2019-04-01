@@ -13,7 +13,14 @@ from pyfcm import FCMNotification
 import configparser
 import database as db
 
-#db.main()
+#database init
+conn = db.create_connection("pythonsqlite.db") #connection
+db.create_db(conn) # create tables
+#test
+# insert_user_sql = """INSERT INTO users (double_name,email,public_key,device_id) VALUES ('massimo.renson','massimo.renson@hotmail.com','G1gcbyeTnR2i...H8_3yV3cuF','abc');"""
+# db.insert_user(conn,insert_user_sql)
+# select_all_users = """SELECT * FROM users;"""
+# db.select_all(conn,select_all_users)
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -77,6 +84,8 @@ def registration_handler(data):
     user['public_key'] = data.get('publicKey')
     user['email'] = data.get('email')
     print('')
+    insert_user_sql = "INSERT INTO users (double_name,email,public_key) VALUES ("+user.get("doubleName")+","+user.get("email")+","+user.get("publicKey")+");"
+    db.insert_user(conn,insert_user_sql)
 
 
 @sio.on('login')

@@ -35,16 +35,28 @@ def select_all(conn,select_all_users):
             print(row)
     except Error as e:
         print(e)
+def create_db(conn):
+    #create user table statement
+    sql_create_auth_table = """CREATE TABLE IF NOT EXISTS auth (double_name text NOT NULL,state_hash text NOT NULL,timestamp text NOT NULL,scanned INTEGER NOT NULL,singed_statehash text NOT NULL);"""
+    #create auth table statement
+    sql_create_user_table = """CREATE TABLE IF NOT EXISTS users (double_name text NOT NULL,email text NOT NULL,public_key text NOT NULL,device_id text NOT NULL); """
+    if conn is not None:
+        #create auth table
+        create_table(conn, sql_create_auth_table)
+        #create user table
+        create_table(conn, sql_create_user_table)
+    else:
+        print("Error! cannot create the database connection.")
 def main():
-    #connectie met db
-    #je kan hier ook een path aan geven --> nu default in project (PATH/<name>.db)
+    #connection db
+    #set other path --> now: default path in project (PATH/<name>.db)
     conn = create_connection("pythonsqlite.db")
     #create user table statement
-    sql_create_user_table = """CREATE TABLE IF NOT EXISTS users (double_name text NOT NULL,state_hash text NOT NULL,timestamp text NOT NULL,scanned INTEGER NOT NULL,singed_statehash text NOT NULL);"""
+    sql_create_user_table = """CREATE TABLE IF NOT EXISTS auth (double_name text NOT NULL,state_hash text NOT NULL,timestamp text NOT NULL,scanned INTEGER NOT NULL,singed_statehash text NOT NULL);"""
     #create auth table statement
-    sql_create_auth_table = """CREATE TABLE IF NOT EXISTS auth (double_name text NOT NULL,public_key test NOT NULL,device_id text NOT NULL); """
+    sql_create_auth_table = """CREATE TABLE IF NOT EXISTS users (double_name text NOT NULL,email text NOT NULL,public_key NOT NULL,device_id text NOT NULL); """
     #test insert user statement
-    insert_user_sql = """INSERT INTO users (double_name,state_hash,timestamp,scanned,singed_statehash) VALUES ('massimo.renson','1gcbyeTnR2iZSfx6r2qIuvhH8','2002-12-25 00:00:00-06:39',0,'1gcbyeTnR2iZSfx6r2qIuvhH8');"""
+    insert_user_sql = """INSERT INTO users (double_name,email,public_key,device_id) VALUES ('massimo.renson','massimo.renson@hotmail.com','G1gcbyeTnR2i...H8_3yV3cuF','abc');"""
     #test select all from users statement
     select_all_users = """SELECT * FROM users;"""
     if conn is not None:
@@ -59,5 +71,5 @@ def main():
     else:
         print("Error! cannot create the database connection.")
 
-# if __name__ == '__main__':
-#     main()
+''' if __name__ == '__main__':
+    main() '''
