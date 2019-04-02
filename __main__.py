@@ -183,4 +183,8 @@ def verify_handler():
         return Response("Oops.. user or loggin attempt not found", status=404)
 
 
+<<<<<<< HEAD
 app.run(host='0.0.0.0', port=5005, debug=True)
+=======
+app.run(host='0.0.0.0', port=5000)
+>>>>>>> 269a47c738a174a27831e7392fc2ab0872bc0aa3
