@@ -13,14 +13,13 @@ from pyfcm import FCMNotification
 import configparser
 import database as db
 
+#SQlite --> problems with flqsk (threading) --> solution set check_same_thread=False when creating connection
 #database init
 conn = db.create_connection("pythonsqlite.db") #connection
 db.create_db(conn) # create tables
-#test
-# insert_user_sql = """INSERT INTO users (double_name,email,public_key,device_id) VALUES ('massimo.renson','massimo.renson@hotmail.com','G1gcbyeTnR2i...H8_3yV3cuF','abc');"""
-# db.insert_user(conn,insert_user_sql)
-# select_all_users = """SELECT * FROM users;"""
-# db.select_all(conn,select_all_users)
+#print tests
+select_all_users = """SELECT * FROM users;"""
+select_all_auth = """SELECT * FROM auth;"""
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -32,7 +31,6 @@ CORS(app, resources=r'/api/*')
 
 users = []
 login_attempts = []
-
 
 def find_user(query, search_for="double_name"):
     print('Search for', query)
@@ -84,8 +82,13 @@ def registration_handler(data):
     user['public_key'] = data.get('publicKey')
     user['email'] = data.get('email')
     print('')
-    insert_user_sql = "INSERT INTO users (double_name,email,public_key) VALUES ("+user.get("double_name")+","+user.get("email")+","+user.get("public_key")+");"
-    db.insert_user(conn,insert_user_sql)
+    #db part
+    doublename=data.get('doubleName')
+    email=data.get('email')
+    publickey=data.get('publicKey')
+    insert_user_sql = "INSERT INTO users (double_name,email,public_key) VALUES (?,?,?);"
+    db.insert_user(conn,insert_user_sql,doublename,email,publickey)
+    #db.select_all(conn,select_all_users)
 
 
 @sio.on('login')
@@ -104,22 +107,27 @@ def login_handler(data):
         user = find_user(data.get('doubleName'))
         push_service.notify_single_device(registration_id=user.get('device_id'), message_title='Finish login', message_body='Tap to finish login', data_message={ 'hash': data.get('state') }, click_action='FLUTTER_NOTIFICATION_CLICK' )
     print('')
-    insert_auth_sql="INSERT INTO auth (double_name,state_hash,timestamp,scanned) VALUES ("+login_attempts["double_name"]+","+login_attempts["state"]+","+login_attempts["timestamp"]+","+login_attempts["scanned"]+");"
-    db.insert_user(conn,insert_auth_sql)
+    #db part
+    insert_auth_sql="INSERT INTO auth (double_name,state_hash,timestamp,scanned) VALUES (?,?,?,?);"
+    db.insert_auth(conn,insert_auth_sql,data.get('doubleName'),data.get('state'),datetime.datetime.now(),0)
+    #db.select_all(conn,select_all_auth)
 
 @app.route('/api/flag', methods=['POST'])
 def flag_handler():
     print('')
     body = request.get_json()
     print('< flag', body)
-    loggin_attempt = find_loggin_attempt(body.get('hash'))
+    loggin_attempt = find_loggin_attempt(body.get('hash')) # finding user by hash?
     if loggin_attempt:
         user = find_user(loggin_attempt.get('double_name'))
         loggin_attempt['scanned'] = True
-        user['device_id'] = body.get('deviceId')
+        user['device_id'] = body.get('deviceId') # device_id --> user table
         sio.emit('scannedFlag', room=loggin_attempt.get('sid'))
-        insert_user_sql="INSERT INTO users (device_id) VALUES ("+user["device_id"]+") WHERE double_name="+user["double+name"]+";"
-        db.insert_user(conn,insert_user_sql)
+        #db part
+        double_name = db.getUserByHash(conn,body.get('hash'))
+        device_id=body.get('deviceId')
+        update_user_sql="UPDATE users SET device_id =?  WHERE double_name=?;"
+        db.update_user(conn,update_user_sql,device_id,double_name)
         return Response("Ok")
     else:
         return Response('User not found', status=404)
@@ -130,13 +138,17 @@ def sign_handler():
     print('')
     body = request.get_json()
     print('< sign', body)
-    user = find_loggin_attempt(body.get('hash'))
+    user = find_loggin_attempt(body.get('hash')) #finding user by hash?
     if user:
         print('user', user)
-        user['singed_statehash'] = body.get('signedHash')
+        user['singed_statehash'] = body.get('signedHash') # signed hash --> auth table
         sio.emit('signed', body.get('signedHash'), room=user.get('sio'))
-        insert_auth_sql="INSERT INTO auth (singed_statehash) VALUES ("+user["singed_statehash"]+") WHERE double_name="+user["double+name"]+";"
-        db.insert_user(conn,insert_auth_sql)
+        #insert_auth_sql="INSERT INTO auth (singed_statehash) VALUES ("+user["singed_statehash"]+") WHERE double_name="+user["double+name"]+";"
+        #db.insert_user(conn,insert_auth_sql)
+        update_auth_sql="UPDATE auth SET singed_statehash =?  WHERE double_name=?;"
+        double_name=db.getUserByHash(conn,body.get('hash'))
+        signed_hash=body.get('signedHash')
+        db.update_auth(conn,update_auth_sql,signed_hash,double_name)
     return Response("Ok")
 
 
@@ -171,4 +183,4 @@ def verify_handler():
         return Response("Oops.. user or loggin attempt not found", status=404)
 
 
-app.run(host='0.0.0.0', port=5005)
+app.run(host='0.0.0.0', port=5005, debug=True)
