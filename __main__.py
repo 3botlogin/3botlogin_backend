@@ -13,7 +13,7 @@ from pyfcm import FCMNotification
 import configparser
 import database as db
 
-#SQlite --> problems with flqsk (threading) --> solution set check_same_thread=False when creating connection
+#SQlite --> problems with flask (threading) --> solution set check_same_thread=False when creating connection
 #database init
 conn = db.create_connection("pythonsqlite.db") #connection
 db.create_db(conn) # create tables
@@ -60,17 +60,26 @@ def identification_handler(data):
     print('')
     print('< identify', data)
     sid = request.sid
-    user = find_user(data.get('doubleName'))
+    #user = find_user(data.get('doubleName'))
+    user = db.getUserByName(conn,data.get('doubleName'))
+    print("-------->",user)
     if user:
         print('> sending nameknown')
         print('found user', user)
-        user['sid'] = sid
+        print(user['sid'])
+        #user['sid'] = sid
+        update_sql="UPDATE users SET sid=?  WHERE double_name=?;"
+        db.update_user(conn,update_sql,sid,user['double_name'])
         emit('nameknown')
     else:
         print('> sending namenotknown')
         emit('namenotknown')
         print('- Adding to array')
         users.append({'double_name': data.get('doubleName'), 'sid': sid})
+        #db part
+        insert_user_sql = "INSERT INTO users (double_name,sid) VALUES (?,?);"
+        db.insert_user(conn,insert_user_sql,data.get('doubleName'),sid)
+        
     print('')
 
 
@@ -86,8 +95,10 @@ def registration_handler(data):
     doublename=data.get('doubleName')
     email=data.get('email')
     publickey=data.get('publicKey')
-    insert_user_sql = "INSERT INTO users (double_name,email,public_key) VALUES (?,?,?);"
-    db.insert_user(conn,insert_user_sql,doublename,email,publickey)
+    #insert_user_sql = "INSERT INTO users (double_name,email,public_key) VALUES (?,?,?);"
+    #db.insert_user(conn,insert_user_sql,doublename,email,publickey)
+    update_sql="UPDATE users SET email=?,public_key=?  WHERE double_name=?;"
+    db.update_user(conn,update_sql,email,publickey,doublename)
     #db.select_all(conn,select_all_users)
 
 
@@ -104,8 +115,10 @@ def login_handler(data):
     print(find_loggin_attempt(data.get('state')))
     print(login_attempts)
     if data.get('firstTime') == False:
-        user = find_user(data.get('doubleName'))
-        push_service.notify_single_device(registration_id=user.get('device_id'), message_title='Finish login', message_body='Tap to finish login', data_message={ 'hash': data.get('state') }, click_action='FLUTTER_NOTIFICATION_CLICK' )
+        #user = find_user(data.get('doubleName'))
+        user = db.getUserByName(conn,data.get('doubleName'))
+        #push_service.notify_single_device(registration_id=user.get('device_id'), message_title='Finish login', message_body='Tap to finish login', data_message={ 'hash': data.get('state') }, click_action='FLUTTER_NOTIFICATION_CLICK' )
+        push_service.notify_single_device(registration_id=user['device_id'], message_title='Finish login', message_body='Tap to finish login', data_message={ 'hash': data.get('state') }, click_action='FLUTTER_NOTIFICATION_CLICK' )
     print('')
     #db part
     insert_auth_sql="INSERT INTO auth (double_name,state_hash,timestamp,scanned) VALUES (?,?,?,?);"
@@ -143,8 +156,7 @@ def sign_handler():
         print('user', user)
         user['singed_statehash'] = body.get('signedHash') # signed hash --> auth table
         sio.emit('signed', body.get('signedHash'), room=user.get('sio'))
-        #insert_auth_sql="INSERT INTO auth (singed_statehash) VALUES ("+user["singed_statehash"]+") WHERE double_name="+user["double+name"]+";"
-        #db.insert_user(conn,insert_auth_sql)
+        #db part
         update_auth_sql="UPDATE auth SET singed_statehash =?  WHERE double_name=?;"
         double_name=db.getUserByHash(conn,body.get('hash'))
         signed_hash=body.get('signedHash')
@@ -157,16 +169,18 @@ def verify_handler():
     print('')
     body = request.get_json()
     print('< verify', body)
-    user = find_user(body.get('username'))
-    login_attempt = find_loggin_attempt(body.get('hash'))
+    #user = find_user(body.get('username'))
+    #login_attempt = find_loggin_attempt(body.get('hash'))
+    user = db.getUserByName(conn,body.get('username'))
+    login_attempt = db.getAuthByHash(conn,body.get('hash'))
     if user and login_attempt:
-        requested_datetime = login_attempt.get('timestamp')
+        requested_datetime = login_attempt.get('timestamp') # obj login_attempt get timestamp
         max_datetime = requested_datetime + timedelta(minutes=10)
         if requested_datetime < max_datetime:
-            public_key = base64.b64decode(user.get('public_key'))
+            public_key = base64.b64decode(user.get('public_key')) # obj user get public key
             signed_hash = base64.b64decode(
-                login_attempt.get('singed_statehash'))
-            original_hash = login_attempt.get('state')
+                login_attempt.get('singed_statehash')) # obj login_attempt get signed hash
+            original_hash = login_attempt.get('state') # obj login_attempt get state hash
             try:
                 bytes_signed_hash = bytes(signed_hash)
                 bytes_original_hash = bytes(original_hash, encoding='utf8')
@@ -183,8 +197,4 @@ def verify_handler():
         return Response("Oops.. user or loggin attempt not found", status=404)
 
 
-<<<<<<< HEAD
 app.run(host='0.0.0.0', port=5005, debug=True)
-=======
-app.run(host='0.0.0.0', port=5000)
->>>>>>> 269a47c738a174a27831e7392fc2ab0872bc0aa3
