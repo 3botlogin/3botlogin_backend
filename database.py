@@ -26,8 +26,10 @@ def insert_user(conn,insert_user_sql,*params):
         c = conn.cursor()
         if len(params)==3:
             c.execute(insert_user_sql,(params[0],params[1],params[2]))
+            conn.commit()   
         elif len(params)==2:
             c.execute(insert_user_sql,(params[0],params[1]))
+            conn.commit()
     except Error as e:
         print(e)
 
@@ -36,6 +38,7 @@ def insert_auth(conn,insert_user_sql,dn,state,ts,s):
     try:
         c = conn.cursor()
         c.execute(insert_user_sql,(dn,state,ts,s))
+        conn.commit()
     except Error as e:
         print(e)
 
@@ -45,7 +48,7 @@ def select_all(conn,select_all_users):
         c = conn.cursor()
         c.execute(select_all_users)
         rows = c.fetchall()
- 
+
         for row in rows:
             print(row)
     except Error as e:
@@ -67,8 +70,10 @@ def update_user(conn,update_sql,*params):
         c = conn.cursor()
         if len(params)==2:
             c.execute(update_sql,(params[0],params[1]))
+            conn.commit()
         elif len(params)==3:
             c.execute(update_sql,(params[0],params[1],params[2]))
+            conn.commit()
     except Error as e:
         print(e)
 
@@ -77,6 +82,7 @@ def update_auth(conn,update_sql,singed_statehash,double_name):
     try:
         c = conn.cursor()
         c.execute(update_sql,(singed_statehash,double_name))
+        conn.commit()
     except Error as e:
         print(e)
 
@@ -124,32 +130,14 @@ def create_db(conn):
 def main():
     # #connection db
     # #set other path --> now: default path in project (PATH/<name>.db)
-    # conn = create_connection("pythonsqlite.db")
+    print('<testing environment>')
+    conn = create_connection("pythonsqlite.db")
+    create_db(conn)
+
+    select_all_users = "SELECT * FROM users;"
+
+    select_all(conn,select_all_users)
     
-    # #create user table statement
-    # sql_create_user_table = """CREATE TABLE IF NOT EXISTS auth (double_name text NOT NULL,state_hash text NOT NULL,timestamp text NOT NULL,scanned INTEGER NOT NULL,singed_statehash text NOT NULL);"""
-    # #create auth table statement
-    # sql_create_auth_table = """CREATE TABLE IF NOT EXISTS users (double_name text NOT NULL,email text NOT NULL,public_key NOT NULL,device_id text NULL); """
-    # #test insert user statement
-    # insert_user_sql = """INSERT INTO users (double_name,email,public_key,device_id) VALUES ('massimo.renson','massimo.renson@hotmail.com','G1gcbyeTnR2i...H8_3yV3cuF','abc');"""
-    # #test select all from users statement
-    # select_all_users = """SELECT * FROM users;"""
-    # if conn is not None:
-    #     #create auth table
-    #     create_table(conn, sql_create_auth_table)
-    #     #create user table
-    #     create_table(conn, sql_create_user_table)
-    #     #test insert user
-    #     #insert_user(conn, insert_user_sql)
-    #     #test select all users
-    #     #select_all(conn,select_all_users)
-    # else:
-    #     print("Error! cannot create the database connection.")
-    def test(param1,*params):
-        print(len(params))
-        print(params[0])
-    test(1,2,'a',4,5)
-
-
+    
 if __name__ == '__main__':
     main()
