@@ -86,7 +86,7 @@ def getUserByName(conn,double_name):
     try:
         c = conn.cursor()
         c.execute(find_statement,(double_name))
-        return c.fetchone()
+        return c.fetchone()[0]
     except Error as e:
         print(e)
 

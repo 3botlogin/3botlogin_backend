@@ -130,12 +130,18 @@ def flag_handler():
     print('')
     body = request.get_json()
     print('< flag', body)
-    loggin_attempt = find_loggin_attempt(body.get('hash')) # finding user by hash?
+    #loggin_attempt = find_loggin_attempt(body.get('hash')) # finding user by hash?
+    loggin_attempt = db.getAuthByHash(conn,body.get('hash'))
     if loggin_attempt:
-        user = find_user(loggin_attempt.get('double_name'))
-        loggin_attempt['scanned'] = True
-        user['device_id'] = body.get('deviceId') # device_id --> user table
-        sio.emit('scannedFlag', room=loggin_attempt.get('sid'))
+        #user = find_user(loggin_attempt.get('double_name'))
+        user = db.getUserByName(conn,loggin_attempt['double_name'])
+        #loggin_attempt['scanned'] = True
+        update_sql="UPDATE auth SET scanned=?  WHERE double_name=?;"
+        db.update_auth(conn,update_sql,1,loggin_attempt['double_name'])
+        #user['device_id'] = body.get('deviceId') # device_id --> user table
+        update_sql="UPDATE users SET device_id  WHERE double_name=?;"
+        db.update_user(conn,update_sql,body.get('deviceId'),loggin_attempt['double_name'])
+        sio.emit('scannedFlag', room=user['sid'])
         #db part
         double_name = db.getUserByHash(conn,body.get('hash'))
         device_id=body.get('deviceId')
@@ -151,16 +157,19 @@ def sign_handler():
     print('')
     body = request.get_json()
     print('< sign', body)
-    user = find_loggin_attempt(body.get('hash')) #finding user by hash?
-    if user:
-        print('user', user)
-        user['singed_statehash'] = body.get('signedHash') # signed hash --> auth table
-        sio.emit('signed', body.get('signedHash'), room=user.get('sio'))
+    #login_attempt = find_loggin_attempt(body.get('hash')) #finding user by hash?
+    login_attempt = db.getAuthByHash(conn,body.get('hash'))
+    if login_attempt:
+        print('user', login_attempt)
+        #login_attempt['singed_statehash'] = body.get('signedHash') # signed hash --> auth table
+        update_sql="UPDATE auth SET singed_statehash =?  WHERE double_name=?;"
+        db.update_auth(conn,update_sql,body.get('signedHash'),login_attempt['double_name'])
+        sio.emit('signed', body.get('signedHash'), room=login_attempt['sid'])
         #db part
-        update_auth_sql="UPDATE auth SET singed_statehash =?  WHERE double_name=?;"
-        double_name=db.getUserByHash(conn,body.get('hash'))
-        signed_hash=body.get('signedHash')
-        db.update_auth(conn,update_auth_sql,signed_hash,double_name)
+        #update_auth_sql="UPDATE auth SET singed_statehash =?  WHERE double_name=?;"
+        #double_name=db.getUserByHash(conn,body.get('hash'))
+        #signed_hash=body.get('signedHash')
+        #db.update_auth(conn,update_auth_sql,signed_hash,double_name)
     return Response("Ok")
 
 
@@ -174,13 +183,16 @@ def verify_handler():
     user = db.getUserByName(conn,body.get('username'))
     login_attempt = db.getAuthByHash(conn,body.get('hash'))
     if user and login_attempt:
-        requested_datetime = login_attempt.get('timestamp') # obj login_attempt get timestamp
+        #requested_datetime = login_attempt.get('timestamp') # obj login_attempt get timestamp
+        requested_datetime = login_attempt['timestamp']
         max_datetime = requested_datetime + timedelta(minutes=10)
         if requested_datetime < max_datetime:
-            public_key = base64.b64decode(user.get('public_key')) # obj user get public key
-            signed_hash = base64.b64decode(
-                login_attempt.get('singed_statehash')) # obj login_attempt get signed hash
-            original_hash = login_attempt.get('state') # obj login_attempt get state hash
+            #public_key = base64.b64decode(user.get('public_key')) # obj user get public key
+            public_key = base64.b64decode(user['public_key'])
+            #signed_hash = base64.b64decode(login_attempt.get('singed_statehash')) # obj login_attempt get signed hash
+            signed_hash = base64.b64decode(login_attempt['singed_statehash'])
+            #original_hash = login_attempt.get('state') # obj login_attempt get state hash
+            original_hash = login_attempt['state_hash']
             try:
                 bytes_signed_hash = bytes(signed_hash)
                 bytes_original_hash = bytes(original_hash, encoding='utf8')
