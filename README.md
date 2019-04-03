@@ -8,7 +8,6 @@ A user is someone that authenticates using 3botlogin.
 | Key | Type | Example | Description |
 | --- | --- | --- | --- |
 | double_name | String | ivan.coene | The name of the user (case insensitive) | 
-| sid | String | EWFWEGFWGWGWDS | Socket ID | 
 | email | String | ivan.coene@gmail.com | The email of the user (case insensitive) | 
 | public_key | string | G1gcbyeTnR2i...H8_3yV3cuF | The public key of the user to verify access |
 | device_id | String | abc | The ID of the device where we can send notifications to | 
@@ -20,6 +19,7 @@ When a user tries to log in, an entry is added
 | Key | Type | Example | Description |
 | --- | --- | --- | --- |
 | double_name | String | ivan.coene | The name of the user (case insensitive) | 
+| sid | String | EWFWEGFWGWGWDS | Socket ID | 
 | state_hash | String | 1gcbyeTnR2iZSfx6r2qIuvhH8 | The "identifier" of a login-attempt |
 | timestamp | Datetime | 2002-12-25 00:00:00-06:39 | The time when this satehash came in |
 | scanned | Boolean | false | Flag to keep the QR-scanned state |
