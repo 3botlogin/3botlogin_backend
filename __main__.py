@@ -20,7 +20,6 @@ print(conn)
 config = configparser.ConfigParser()
 config.read('config.ini')
 push_service = FCMNotification(api_key=config['DEFAULT']['API_KEY'])
-push_service.notify_single_device(registration_id='dm1gMl5UeGI:APA91bFHF-8mXco4xfhEEG7tzBiUbS8Hrie3YuU4jQqZNwO36dkIh949uGDdy9yXWHGra-Cm0HlLH3tLzwjKSKYpMQ-hhOiKsF-K1oyoLtBe9HemvIc4Ao4SzVxdICeTTc7lS5SlLsoQ', message_title='Server started', message_body='d', )
 
 app = Flask(__name__)
 sio = SocketIO(app)
@@ -145,4 +144,4 @@ def verify_handler():
         return Response("Oops.. user or loggin attempt not found", status=404)
 
 
-app.run(host='0.0.0.0', port=5005, debug=True)
+app.run(host='0.0.0.0', port=5000, debug=True)
