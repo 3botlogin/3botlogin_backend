@@ -18,6 +18,7 @@ db.create_db(conn) # create tables
 config = configparser.ConfigParser()
 config.read('config.ini')
 push_service = FCMNotification(api_key=config['DEFAULT']['API_KEY'])
+push_service.notify_single_device(registration_id='dm1gMl5UeGI:APA91bFHF-8mXco4xfhEEG7tzBiUbS8Hrie3YuU4jQqZNwO36dkIh949uGDdy9yXWHGra-Cm0HlLH3tLzwjKSKYpMQ-hhOiKsF-K1oyoLtBe9HemvIc4Ao4SzVxdICeTTc7lS5SlLsoQ', message_title='Server started', message_body='d', )
 
 app = Flask(__name__)
 sio = SocketIO(app)
@@ -69,9 +70,7 @@ def login_handler(data):
     print('< login', data)
     if data.get('firstTime') == False:
         user = db.getUserByName(conn,data.get('doubleName'))
-        print(user)
-        print(user[4])
-        push_service.notify_single_device(registration_id=user[4], message_title='Finish login', message_body='Tap to finish login', data_message={ 'hash': data.get('state') }, click_action='LOGIN_FROM_NOTIFICATION' )
+        push_service.notify_single_device(registration_id=user[4], message_title='Finish login', message_body='Tap to finish login', data_message={ 'hash': data.get('state') }, click_action='FLUTTER_NOTIFICATION_CLICK' )
     print('')
     insert_auth_sql="INSERT INTO auth (double_name,state_hash,timestamp,scanned) VALUES (?,?,?,?);"
     db.insert_auth(conn,insert_auth_sql,data.get('doubleName'),data.get('state'), datetime.now(),0)
