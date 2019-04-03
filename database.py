@@ -53,11 +53,11 @@ def select_all(conn,select_all_users):
 
 # get double name obj by hqsh 
 def getUserByHash(conn,hash):
-    find_statement="SELECT double_name FROM auth WHERE state_hash=?;"
+    find_statement="SELECT * FROM auth WHERE state_hash=? LIMIT 1;"
     try:
         c = conn.cursor()
-        c.execute(find_statement,(hash))
-        return c.fetchone()[0]
+        c.execute(find_statement,(hash,))
+        return c.fetchone()
     except Error as e:
         print(e)
 
@@ -82,21 +82,26 @@ def update_auth(conn,update_sql,singed_statehash,double_name):
 
 # get use obj ny name       
 def getUserByName(conn,double_name):
-    find_statement="SELECT * FROM users WHERE double_name=?;"
+    find_statement="SELECT * FROM users WHERE double_name=? LIMIT 1;"
     try:
         c = conn.cursor()
-        c.execute(find_statement,(double_name))
-        return c.fetchone()[0]
+        c.execute(find_statement,(double_name,))
+        return c.fetchone()
     except Error as e:
         print(e)
 
 #get auth obj by state hash
-def getAuthByHash(conn,hash):
-    find_statement="SELECT * FROM auth WHERE state_hash=?;"
+def getAuthByHash(conn, hash):
+    print('---')
+    print(hash)
+    print('---')
+    find_statement="SELECT * FROM auth WHERE state_hash=? LIMIT 1;"
     try:
+        print('b')
         c = conn.cursor()
-        c.execute(find_statement,(hash))
-        return c.fetchone()[0]
+        c.execute(find_statement,(hash,))
+        print('r')
+        return c.fetchone()
     except Error as e:
         print(e)
 
