@@ -15,6 +15,8 @@ import database as db
 conn = db.create_connection("pythonsqlite.db") #connection
 db.create_db(conn) # create tables
 
+print(conn)
+
 config = configparser.ConfigParser()
 config.read('config.ini')
 push_service = FCMNotification(api_key=config['DEFAULT']['API_KEY'])
@@ -143,4 +145,4 @@ def verify_handler():
         return Response("Oops.. user or loggin attempt not found", status=404)
 
 
-app.run(host='0.0.0.0', port=5000, debug=True)
+app.run(host='0.0.0.0', port=5005, debug=True)
