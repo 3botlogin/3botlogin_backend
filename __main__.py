@@ -76,6 +76,15 @@ def login_handler(data):
     insert_auth_sql="INSERT INTO auth (double_name,state_hash,timestamp,scanned) VALUES (?,?,?,?);"
     db.insert_auth(conn,insert_auth_sql,data.get('doubleName'),data.get('state'), datetime.now(),0)
 
+@sio.on('resend')
+def resend_handler(data):
+    print('')
+    print('< resend')
+    user = db.getUserByName(conn,data.get('doubleName'))
+    push_service.notify_single_device(registration_id=user[4], message_title='Finish login', message_body='Tap to finish login', data_message={ 'hash': data.get('state') }, click_action='FLUTTER_NOTIFICATION_CLICK' )
+    print('')
+    
+
 @app.route('/api/flag', methods=['POST'])
 def flag_handler():
     print('')
