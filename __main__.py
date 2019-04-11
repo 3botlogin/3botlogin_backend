@@ -94,8 +94,8 @@ def flag_handler():
     print(loggin_attempt)
     if loggin_attempt:
 
-        update_sql="UPDATE users SET device_id=''  WHERE device_id=?;"
-        db.update_user(conn,update_sql,body.get('deviceId'))
+        update_sql="UPDATE users SET device_id=?  WHERE device_id=?;"
+        db.update_user(conn,update_sql,'',body.get('deviceId'))
 
         user = db.getUserByName(conn,loggin_attempt[0])
         update_sql="UPDATE auth SET scanned=?  WHERE double_name=?;"
