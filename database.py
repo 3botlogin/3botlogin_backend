@@ -111,6 +111,23 @@ def getAuthByHash(conn, hash):
     except Error as e:
         print(e)
 
+# get auth obj by deviceId 
+# TODO only get auth if in time and not signed
+def getAuthByDeviceId(conn, deviceId):
+    find_user_statement="SELECT * FROM users WHERE device_id=? LIMIT 1;"
+    try:
+        c = conn.cursor()
+        c.execute(find_user_statement,(deviceId,))
+        user = c.fetchone()
+        print(user)
+        find_auth_statement="SELECT * FROM auth WHERE double_name=? AND singed_statehash IS NULL LIMIT 1;"
+        c.execute(find_auth_statement,(user[0],))
+        auth = c.fetchone()
+        print(auth)
+        return auth
+    except Error as e:
+        print(e)
+
 # db init making tables users & auth(=login attempts)
 def create_db(conn):
     #create user table statement

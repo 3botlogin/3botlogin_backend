@@ -124,6 +124,18 @@ def sign_handler():
     return Response("Ok")
 
 
+@app.route('/api/attemts/<deviceid>', methods=['GET'])
+def get_attemts_handler(deviceid):
+    print('')
+    print('< get attemts', deviceid)
+    login_attempt = db.getAuthByDeviceId(conn, deviceid)
+    print('>', login_attempt)
+    if (login_attempt):
+        return Response(login_attempt[1])
+    else:
+        return Response(None)
+
+
 @app.route('/api/verify', methods=['POST'])
 def verify_handler():
     print('')
