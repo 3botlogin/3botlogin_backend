@@ -3,6 +3,7 @@ from flask import Flask, Response, request
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 from datetime import datetime, timedelta
+import time
 import nacl.signing
 import nacl.encoding
 import binascii
@@ -85,6 +86,7 @@ def resend_handler(data):
     print('')
     
 
+got_flag_message = False
 @app.route('/api/flag', methods=['POST'])
 def flag_handler():
     print('')
@@ -102,7 +104,12 @@ def flag_handler():
         db.update_auth(conn,update_sql,1,loggin_attempt[0])
         update_sql="UPDATE users SET device_id =?  WHERE double_name=?;"
         db.update_user(conn,update_sql,body.get('deviceId'),loggin_attempt[0])
-        sio.emit('scannedFlag', room=user[1])
+        attempts = 0
+        while not got_flag_message and attempts < 10:
+            print('Sending "scannedFlag" message to', user[1])
+            sio.emit('scannedFlag', room=user[1], callback = flag_message_received)
+            time.sleep(2)
+            attempts += 1
     
         device_id=body.get('deviceId')
         update_user_sql="UPDATE users SET device_id =?  WHERE double_name=?;"
@@ -111,7 +118,11 @@ def flag_handler():
     else:
         return Response('User not found', status=404)
 
+def flag_message_received ():
+    got_flag_message = True
 
+
+got_signed_message = False
 @app.route('/api/sign', methods=['POST'])
 def sign_handler():
     print('')
@@ -124,9 +135,16 @@ def sign_handler():
         print(user)
         update_sql="UPDATE auth SET singed_statehash =?  WHERE double_name=?;"
         db.update_auth(conn,update_sql,body.get('signedHash'),login_attempt[0])
-        sio.emit('signed', body.get('signedHash'), room=user[1])
+        attempts = 0
+        while not got_signed_message and attempts < 10:
+            print('Sending "signed" message to', user[1])
+            sio.emit('signed', body.get('signedHash'), room=user[1], callback = signed_message_received)
+            time.sleep(2)
+            attempts += 1
+        
     return Response("Ok")
-
+def signed_message_received ():
+    got_signed_message = True
 
 @app.route('/api/attemts/<deviceid>', methods=['GET'])
 def get_attemts_handler(deviceid):
