@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from flask import Flask, Response, request
+from flask import Flask, Response, request, json
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 from datetime import datetime, timedelta
@@ -84,9 +84,41 @@ def resend_handler(data):
     user = db.getUserByName(conn,data.get('doubleName'))
     push_service.notify_single_device(registration_id=user[4], message_title='Finish login', message_body='Tap to finish login', data_message={ 'hash': data.get('state') }, click_action='FLUTTER_NOTIFICATION_CLICK' )
     print('')
-    
 
-got_flag_message = False
+# @sio.on('forceRefetch')
+# def force_refetch_handler(data):
+#     print('')
+#     print('< force refetch', data)
+    
+#     loggin_attempt = db.getAuthByHash(conn, data.get('state'))
+#     user = db.getUserByName(conn,data.get('doubleName'))
+#     print(loggin_attempt)
+#     print(user)
+#     if (loggin_attempt != None and user != None):
+#         if (loggin_attempt[3]):
+#             sio.emit('scannedFlag', room=user[1])
+#         if (loggin_attempt[4]):
+#             sio.emit('signed', loggin_attempt[4], room=user[1])
+
+@app.route('/api/forcerefetch', methods=['GET'])
+def force_refetch_handler():
+    print('')
+    data = request.args
+    print('< force refetch', data)
+    if (data == None): return Response("Got no data", status=400)
+    print('hash', data['hash'])
+    loggin_attempt = db.getAuthByHash(conn, data['hash'])
+    print(loggin_attempt)
+    if (loggin_attempt != None):
+        data = {"scanned": loggin_attempt[3], "signed": loggin_attempt[4]}
+        response = app.response_class(
+            response=json.dumps(data),
+            mimetype='application/json'
+        )
+        print(data)
+        return response
+        
+
 @app.route('/api/flag', methods=['POST'])
 def flag_handler():
     print('')
@@ -104,12 +136,7 @@ def flag_handler():
         db.update_auth(conn,update_sql,1,loggin_attempt[0])
         update_sql="UPDATE users SET device_id =?  WHERE double_name=?;"
         db.update_user(conn,update_sql,body.get('deviceId'),loggin_attempt[0])
-        attempts = 0
-        while not got_flag_message and attempts < 10:
-            print('Sending "scannedFlag" message to', user[1])
-            sio.emit('scannedFlag', room=user[1], callback = flag_message_received)
-            time.sleep(2)
-            attempts += 1
+        sio.emit('scannedFlag', room=user[1])
     
         device_id=body.get('deviceId')
         update_user_sql="UPDATE users SET device_id =?  WHERE double_name=?;"
@@ -118,33 +145,24 @@ def flag_handler():
     else:
         return Response('User not found', status=404)
 
-def flag_message_received ():
-    got_flag_message = True
 
-
-got_signed_message = False
 @app.route('/api/sign', methods=['POST'])
 def sign_handler():
     print('')
     body = request.get_json()
     print('< sign', body)
     login_attempt = db.getAuthByHash(conn,body.get('hash'))
-    if login_attempt:
+    if login_attempt != None:
         print(login_attempt)
         user = db.getUserByName(conn,login_attempt[0])
         print(user)
         update_sql="UPDATE auth SET singed_statehash =?  WHERE double_name=?;"
         db.update_auth(conn,update_sql,body.get('signedHash'),login_attempt[0])
-        attempts = 0
-        while not got_signed_message and attempts < 10:
-            print('Sending "signed" message to', user[1])
-            sio.emit('signed', body.get('signedHash'), room=user[1], callback = signed_message_received)
-            time.sleep(2)
-            attempts += 1
-        
-    return Response("Ok")
-def signed_message_received ():
-    got_signed_message = True
+        sio.emit('signed', body.get('signedHash'), room=user[1])      
+        return Response("Ok")
+    else:
+        return Response("Something went wrong", status=500)
+
 
 @app.route('/api/attemts/<deviceid>', methods=['GET'])
 def get_attemts_handler(deviceid):
@@ -152,9 +170,11 @@ def get_attemts_handler(deviceid):
     print('< get attemts', deviceid)
     login_attempt = db.getAuthByDeviceId(conn, deviceid)
     print('>', login_attempt)
-    if (login_attempt):
+    if (login_attempt is not None):
+        print('not none')
         return Response(login_attempt[1])
     else:
+        print('is none')
         return Response(None)
 
 

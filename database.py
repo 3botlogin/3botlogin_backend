@@ -98,15 +98,10 @@ def getUserByName(conn,double_name):
 
 #get auth obj by state hash
 def getAuthByHash(conn, hash):
-    print('---')
-    print(hash)
-    print('---')
     find_statement="SELECT * FROM auth WHERE state_hash=? LIMIT 1;"
     try:
-        print('b')
         c = conn.cursor()
         c.execute(find_statement,(hash,))
-        print('r')
         return c.fetchone()
     except Error as e:
         print(e)
@@ -120,11 +115,14 @@ def getAuthByDeviceId(conn, deviceId):
         c.execute(find_user_statement,(deviceId,))
         user = c.fetchone()
         print(user)
-        find_auth_statement="SELECT * FROM auth WHERE double_name=? AND singed_statehash IS NULL LIMIT 1;"
-        c.execute(find_auth_statement,(user[0],))
-        auth = c.fetchone()
-        print(auth)
-        return auth
+        if (user is not None):
+            find_auth_statement="SELECT * FROM auth WHERE double_name=? AND singed_statehash IS NULL LIMIT 1;"
+            c.execute(find_auth_statement,(user[0],))
+            auth = c.fetchone()
+            print(auth)
+            return auth
+        else:
+            return None
     except Error as e:
         print(e)
 
