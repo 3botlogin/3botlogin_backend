@@ -85,21 +85,6 @@ def resend_handler(data):
     push_service.notify_single_device(registration_id=user[4], message_title='Finish login', message_body='Tap to finish login', data_message={ 'hash': data.get('state') }, click_action='FLUTTER_NOTIFICATION_CLICK' )
     print('')
 
-# @sio.on('forceRefetch')
-# def force_refetch_handler(data):
-#     print('')
-#     print('< force refetch', data)
-    
-#     loggin_attempt = db.getAuthByHash(conn, data.get('state'))
-#     user = db.getUserByName(conn,data.get('doubleName'))
-#     print(loggin_attempt)
-#     print(user)
-#     if (loggin_attempt != None and user != None):
-#         if (loggin_attempt[3]):
-#             sio.emit('scannedFlag', room=user[1])
-#         if (loggin_attempt[4]):
-#             sio.emit('signed', loggin_attempt[4], room=user[1])
-
 @app.route('/api/forcerefetch', methods=['GET'])
 def force_refetch_handler():
     print('')
