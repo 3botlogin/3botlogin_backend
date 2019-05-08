@@ -1,6 +1,8 @@
 import sqlite3
 from sqlite3 import Error
 from flask import g
+from datetime import datetime, timedelta
+import time
 # create a database connection to a SQLite database
 def create_connection(db_file):
     try:
@@ -34,14 +36,23 @@ def insert_user(conn,insert_user_sql,*params):
         print(e)
 
 # setting login attempt double name, state hash, timestamp & scanned
-def insert_auth(conn,insert_user_sql,dn,state,ts,s):
+def insert_auth(conn,insert_user_sql,dn,state,ts,s, data):
+    delete_auth_for_user(conn,dn)
     try:
         c = conn.cursor()
-        c.execute(insert_user_sql,(dn,state,ts,s))
+        c.execute(insert_user_sql,(dn,state,ts,s, data))
         conn.commit()
     except Error as e:
         print(e)
 
+def delete_auth_for_user(conn, double_name):
+    try:
+        delete_sql = 'DELETE from auth WHERE double_name=? AND singed_statehash IS NULL;'
+        c = conn.cursor()
+        c.execute(delete_sql, (double_name,))
+        conn.commit()
+    except Error as e:
+        print(e)
 # some printing for testing
 def select_all(conn,select_all_users):
     try:
@@ -107,19 +118,15 @@ def getAuthByHash(conn, hash):
         print(e)
 
 # get auth obj by deviceId 
-# TODO only get auth if in time and not signed
-def getAuthByDeviceId(conn, deviceId):
-    find_user_statement="SELECT * FROM users WHERE device_id=? LIMIT 1;"
+def getAuthByDoubleName(conn, doublename):
     try:
         c = conn.cursor()
-        c.execute(find_user_statement,(deviceId,))
-        user = c.fetchone()
-        print(user)
-        if (user is not None):
-            find_auth_statement="SELECT * FROM auth WHERE double_name=? AND singed_statehash IS NULL LIMIT 1;"
-            c.execute(find_auth_statement,(user[0],))
-            auth = c.fetchone()
-            print(auth)
+        find_auth_statement="SELECT * FROM auth WHERE double_name=? AND singed_statehash IS NULL LIMIT 1;"
+        c.execute(find_auth_statement,(doublename,))
+        auth = c.fetchone()
+
+        print(auth)
+        if auth and datetime.now() < datetime.strptime(auth[2], '%Y-%m-%d %H:%M:%S.%f') + timedelta(minutes=10) :
             return auth
         else:
             return None

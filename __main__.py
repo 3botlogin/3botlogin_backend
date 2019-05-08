@@ -65,7 +65,7 @@ def registration_handler(data):
     update_sql="UPDATE users SET email=?,public_key=?  WHERE double_name=?;"
     db.update_user(conn,update_sql,email,publickey,doublename)
 
-
+# TODO: Add requested data to db
 @sio.on('login')
 def login_handler(data):
     print('')
@@ -74,8 +74,8 @@ def login_handler(data):
         user = db.getUserByName(conn,data.get('doubleName'))
         push_service.notify_single_device(registration_id=user[4], message_title='Finish login', message_body='Tap to finish login', data_message=data, click_action='FLUTTER_NOTIFICATION_CLICK' )
     print('')
-    insert_auth_sql="INSERT INTO auth (double_name,state_hash,timestamp,scanned) VALUES (?,?,?,?);"
-    db.insert_auth(conn,insert_auth_sql,data.get('doubleName'),data.get('state'), datetime.now(),0)
+    insert_auth_sql="INSERT INTO auth (double_name,state_hash,timestamp,scanned,data) VALUES (?,?,?,?,?);"
+    db.insert_auth(conn,insert_auth_sql,data.get('doubleName'),data.get('state'), datetime.now(),0, json.dumps(data))
 
 @sio.on('resend')
 def resend_handler(data):
@@ -154,18 +154,22 @@ def sign_handler():
         return Response("Something went wrong", status=500)
 
 
-@app.route('/api/attemts/<deviceid>', methods=['GET'])
-def get_attemts_handler(deviceid):
+@app.route('/api/attempts/<doublename>', methods=['GET'])
+def get_attempts_handler(doublename):
     print('')
-    print('< get attemts', deviceid)
-    login_attempt = db.getAuthByDeviceId(conn, deviceid)
+    print('< get attempts', doublename)
+    login_attempt = db.getAuthByDoubleName(conn, doublename)
     print('>', login_attempt)
     if (login_attempt is not None):
         print('not none')
-        return Response(login_attempt[1])
+        response = app.response_class(
+            response=json.dumps(json.loads(login_attempt[5])),
+            mimetype='application/json'
+        )
+        return response
     else:
         print('is none')
-        return Response(None)
+        return Response("No login attempts found", status=204)
 
 
 @app.route('/api/verify', methods=['POST'])
