@@ -219,4 +219,4 @@ def get_user_handler(doublename):
         print('is none')
         return Response(None)
 
-app.run(host='0.0.0.0', port=5000, debug=True)
+app.run(host='0.0.0.0', port=5000)
