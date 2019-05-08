@@ -118,7 +118,7 @@ def flag_handler():
 
         user = db.getUserByName(conn,loggin_attempt[0])
         update_sql="UPDATE auth SET scanned=?  WHERE double_name=?;"
-        db.update_auth(conn,update_sql,1,loggin_attempt[0])
+        db.update_auth(conn,update_sql,1,'',loggin_attempt[0])
         update_sql="UPDATE users SET device_id =?  WHERE double_name=?;"
         db.update_user(conn,update_sql,body.get('deviceId'),loggin_attempt[0])
         sio.emit('scannedFlag', room=user[1])
@@ -141,9 +141,14 @@ def sign_handler():
         print(login_attempt)
         user = db.getUserByName(conn,login_attempt[0])
         print(user)
-        update_sql="UPDATE auth SET singed_statehash =?  WHERE double_name=?;"
-        db.update_auth(conn,update_sql,body.get('signedHash'),login_attempt[0])
-        sio.emit('signed', body.get('signedHash'), room=user[1])      
+        update_sql="UPDATE auth SET singed_statehash =?, data=?  WHERE state_hash=?;"
+        db.update_auth(conn,update_sql,body.get('signedHash'), json.dumps(body.get('data')),body.get('hash'))
+        login_attempt = db.getAuthByHash(conn,body.get('hash'))
+        print(login_attempt)
+        sio.emit('signed', {
+            'signedHash': body.get('signedHash'),
+            'data': body.get('data')
+        }, room=user[1])      
         return Response("Ok")
     else:
         return Response("Something went wrong", status=500)
@@ -175,6 +180,7 @@ def verify_handler():
         max_datetime = requested_datetime + timedelta(minutes=10)
         if requested_datetime < max_datetime:
             public_key = base64.b64decode(user[3])
+            print(login_attempt)
             signed_hash = base64.b64decode(login_attempt[4])
             original_hash = login_attempt[1]
             try:
@@ -191,5 +197,26 @@ def verify_handler():
     else:
         return Response("Oops.. user or loggin attempt not found", status=404)
 
+@app.route('/api/users/<doublename>', methods=['GET'])
+def get_user_handler(doublename):
+    print('')
+    print('< get doublename', doublename)
+    user = db.getUserByName(conn, doublename)
+    print('>', user)
+    if (user is not None):
+        print('not none')
+        data = {
+            "doublename": doublename,
+            "publicKey": user[3]
+        }
+        response = app.response_class(
+            response=json.dumps(data),
+            mimetype='application/json'
+        )
+        print(data)
+        return response
+    else:
+        print('is none')
+        return Response(None)
 
 app.run(host='0.0.0.0', port=5000, debug=True)

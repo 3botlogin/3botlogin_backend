@@ -78,10 +78,10 @@ def update_user(conn,update_sql,*params):
         print(e)
 
 # update signed hash from auth obj
-def update_auth(conn,update_sql,singed_statehash,double_name):
+def update_auth(conn, update_sql, singed_statehash, data, double_name):
     try:
         c = conn.cursor()
-        c.execute(update_sql,(singed_statehash,double_name))
+        c.execute(update_sql,(singed_statehash,data,double_name))
         conn.commit()
     except Error as e:
         print(e)
@@ -129,7 +129,7 @@ def getAuthByDeviceId(conn, deviceId):
 # db init making tables users & auth(=login attempts)
 def create_db(conn):
     #create user table statement
-    sql_create_auth_table = """CREATE TABLE IF NOT EXISTS auth (double_name text NOT NULL,state_hash text NOT NULL, timestamp text NOT NULL,scanned INTEGER NOT NULL,singed_statehash text NULL);"""
+    sql_create_auth_table = """CREATE TABLE IF NOT EXISTS auth (double_name text NOT NULL,state_hash text NOT NULL, timestamp text NOT NULL,scanned INTEGER NOT NULL,singed_statehash text NULL, data text NULL);"""
     #create auth table statement
     sql_create_user_table = """CREATE TABLE IF NOT EXISTS users (double_name text NOT NULL,sid text NULL,email text NULL,public_key text NULL,device_id text NULL); """
     if conn is not None:
