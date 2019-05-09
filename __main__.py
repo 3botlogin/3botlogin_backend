@@ -36,7 +36,7 @@ def identification_handler(data):
     print('')
     print('< identify', data)
     sid = request.sid
-    user = db.getUserByName(conn,data.get('doubleName'))
+    user = db.getUserByName(conn,data.get('doubleName').lower())
     print("-------->",user)
     if user:
         print('> sending nameknown')
@@ -49,7 +49,7 @@ def identification_handler(data):
         emit('namenotknown')
         print('- Adding to array')
         insert_user_sql = "INSERT INTO users (double_name,sid) VALUES (?,?);"
-        db.insert_user(conn,insert_user_sql,data.get('doubleName'),sid)
+        db.insert_user(conn,insert_user_sql,data.get('doubleName').lower(),sid)
         
     print('')
 
@@ -59,7 +59,7 @@ def registration_handler(data):
     print('')
     print('< register', data)
     print('')
-    doublename=data.get('doubleName')
+    doublename=data.get('doubleName').lower()
     email=data.get('email')
     publickey=data.get('publicKey')
     update_sql="UPDATE users SET email=?,public_key=?  WHERE double_name=?;"
@@ -71,17 +71,17 @@ def login_handler(data):
     print('')
     print('< login', data)
     if data.get('firstTime') == False:
-        user = db.getUserByName(conn,data.get('doubleName'))
+        user = db.getUserByName(conn,data.get('doubleName').lower())
         push_service.notify_single_device(registration_id=user[4], message_title='Finish login', message_body='Tap to finish login', data_message=data, click_action='FLUTTER_NOTIFICATION_CLICK' )
     print('')
     insert_auth_sql="INSERT INTO auth (double_name,state_hash,timestamp,scanned,data) VALUES (?,?,?,?,?);"
-    db.insert_auth(conn,insert_auth_sql,data.get('doubleName'),data.get('state'), datetime.now(),0, json.dumps(data))
+    db.insert_auth(conn,insert_auth_sql,data.get('doubleName').lower(),data.get('state'), datetime.now(),0, json.dumps(data))
 
 @sio.on('resend')
 def resend_handler(data):
     print('')
     print('< resend', data)
-    user = db.getUserByName(conn,data.get('doubleName'))
+    user = db.getUserByName(conn,data.get('doubleName').lower())
     push_service.notify_single_device(registration_id=user[4], message_title='Finish login', message_body='Tap to finish login', data_message=data, click_action='FLUTTER_NOTIFICATION_CLICK' )
     print('')
 
@@ -157,8 +157,8 @@ def sign_handler():
 @app.route('/api/attempts/<doublename>', methods=['GET'])
 def get_attempts_handler(doublename):
     print('')
-    print('< get attempts', doublename)
-    login_attempt = db.getAuthByDoubleName(conn, doublename)
+    print('< get attempts', doublename.lower())
+    login_attempt = db.getAuthByDoubleName(conn, doublename.lower())
     print('>', login_attempt)
     if (login_attempt is not None):
         print('not none')
@@ -204,13 +204,13 @@ def verify_handler():
 @app.route('/api/users/<doublename>', methods=['GET'])
 def get_user_handler(doublename):
     print('')
-    print('< get doublename', doublename)
-    user = db.getUserByName(conn, doublename)
+    print('< get doublename', doublename.lower())
+    user = db.getUserByName(conn, doublename.lower())
     print('>', user)
     if (user is not None):
         print('not none')
         data = {
-            "doublename": doublename,
+            "doublename": doublename.lower(),
             "publicKey": user[3]
         }
         response = app.response_class(
