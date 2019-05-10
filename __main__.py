@@ -64,9 +64,7 @@ def checkname_handler(data):
         emit('nameknown')
     else:
         emit('namenotknown')
-        
     print('')
-
 
 @sio.on('register')
 def registration_handler(data):
