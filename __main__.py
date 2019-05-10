@@ -53,6 +53,20 @@ def identification_handler(data):
         
     print('')
 
+@sio.on('checkname')
+def checkname_handler(data):
+    print('')
+    print('< checkname', data)
+    sid = request.sid
+    user = db.getUserByName(conn,data.get('doubleName').lower())
+    print("-------->",user)
+    if user:
+        emit('nameknown')
+    else:
+        emit('namenotknown')
+        
+    print('')
+
 
 @sio.on('register')
 def registration_handler(data):
