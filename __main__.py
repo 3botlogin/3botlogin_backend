@@ -82,6 +82,7 @@ def registration_handler(data):
 def login_handler(data):
     print('')
     print('< login', data)
+    data['type'] = 'login'
     if data.get('firstTime') == False:
         user = db.getUserByName(conn,data.get('doubleName').lower())
         push_service.notify_single_device(registration_id=user[4], message_title='Finish login', message_body='Tap to finish login', data_message=data, click_action='FLUTTER_NOTIFICATION_CLICK' )
@@ -94,6 +95,7 @@ def resend_handler(data):
     print('')
     print('< resend', data)
     user = db.getUserByName(conn,data.get('doubleName').lower())
+    data['type'] = 'login'
     push_service.notify_single_device(registration_id=user[4], message_title='Finish login', message_body='Tap to finish login', data_message=data, click_action='FLUTTER_NOTIFICATION_CLICK' )
     print('')
 
@@ -234,5 +236,13 @@ def get_user_handler(doublename):
     else:
         print('is none')
         return Response(None)
+
+@app.route('/api/users/<doublename>/emailverified', methods=['post'])
+def set_email_verified_handler(doublename):
+    print('')
+    print('< get user', doublename.lower())
+    user = db.getUserByName(conn,doublename.lower())
+    push_service.notify_single_device(registration_id=user[4], message_title='Email verified', message_body='Thanks for verifying your email', data_message={'type': 'email_verification'} ,click_action='EMAIL_VERIFIED')
+    return Response('Ok')
 
 app.run(host='0.0.0.0', port=5000)
