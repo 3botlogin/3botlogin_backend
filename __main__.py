@@ -30,29 +30,6 @@ CORS(app, resources={r"*": {"origins": ["*"]}})
 def connect_handler():
     print('Connected!')
 
-
-@sio.on('identify')
-def identification_handler(data):
-    print('')
-    print('< identify', data)
-    sid = request.sid
-    user = db.getUserByName(conn,data.get('doubleName').lower())
-    print("-------->",user)
-    if user:
-        print('> sending nameknown')
-        print('found user', user)
-        update_sql="UPDATE users SET sid=?  WHERE double_name=?;"
-        db.update_user(conn,update_sql,sid,user[0])
-        emit('nameknown')
-    else:
-        print('> sending namenotknown')
-        emit('namenotknown')
-        print('- Adding to array')
-        insert_user_sql = "INSERT INTO users (double_name,sid) VALUES (?,?);"
-        db.insert_user(conn,insert_user_sql,data.get('doubleName').lower(),sid)
-        
-    print('')
-
 @sio.on('checkname')
 def checkname_handler(data):
     print('')
@@ -73,16 +50,24 @@ def registration_handler(data):
     print('')
     doublename=data.get('doubleName').lower()
     email=data.get('email')
+    sid = request.sid
     publickey=data.get('publicKey')
-    update_sql="UPDATE users SET email=?,public_key=?  WHERE double_name=?;"
-    db.update_user(conn,update_sql,email,publickey,doublename)
+    update_sql="INSERT into users (double_name, sid, email, public_key) VALUES(?,?,?,?);"
+    db.insert_user(conn,update_sql,doublename, sid, email ,publickey)
 
-# TODO: Add requested data to db
 @sio.on('login')
 def login_handler(data):
     print('')
     print('< login', data)
     data['type'] = 'login'
+
+    sid = request.sid
+    user = db.getUserByName(conn,data.get('doubleName').lower())
+    if user:
+        print('found user', user)
+        update_sql="UPDATE users SET sid=?  WHERE double_name=?;"
+        db.update_user(conn,update_sql,sid,user[0])
+
     if data.get('firstTime') == False:
         user = db.getUserByName(conn,data.get('doubleName').lower())
         push_service.notify_single_device(registration_id=user[4], message_title='Finish login', message_body='Tap to finish login', data_message=data, click_action='FLUTTER_NOTIFICATION_CLICK' )
@@ -158,7 +143,9 @@ def sign_handler():
         update_sql="UPDATE auth SET singed_statehash =?, data=?  WHERE state_hash=?;"
         db.update_auth(conn,update_sql,body.get('signedHash'), json.dumps(body.get('data')),body.get('hash'))
         login_attempt = db.getAuthByHash(conn,body.get('hash'))
-        print(login_attempt)
+        print()
+        print(user[1])
+        print()
         sio.emit('signed', {
             'signedHash': body.get('signedHash'),
             'data': body.get('data')
