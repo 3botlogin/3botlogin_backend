@@ -23,12 +23,16 @@ config.read('config.ini')
 push_service = FCMNotification(api_key=config['DEFAULT']['API_KEY'])
 
 app = Flask(__name__)
-sio = SocketIO(app)
+sio = SocketIO(app, transports=["websocket"])
 CORS(app, resources={r"*": {"origins": ["*"]}})
 
 @sio.on('connect')
 def connect_handler():
-    print('Connected!')
+    print('Connected!', request.sid)
+
+@sio.on('disconnect')
+def on_disconnect():
+    print('Client disconnected', request.sid)
 
 
 @sio.on('identify')
@@ -55,7 +59,6 @@ def identification_handler(data):
 
 @sio.on('checkname')
 def checkname_handler(data):
-    print('')
     print('< checkname', data)
     sid = request.sid
     user = db.getUserByName(conn,data.get('doubleName').lower())
