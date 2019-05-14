@@ -26,11 +26,8 @@ def create_table(conn, create_table_sql):
 def insert_user(conn,insert_user_sql,*params):
     try:
         c = conn.cursor()
-        if len(params)==3:
-            c.execute(insert_user_sql,(params[0],params[1],params[2]))
-            conn.commit()   
-        elif len(params)==2:
-            c.execute(insert_user_sql,(params[0],params[1]))
+        if len(params)==4:
+            c.execute(insert_user_sql,(params[0],params[1],params[2],params[3]))
             conn.commit()
     except Error as e:
         print(e)
@@ -82,8 +79,8 @@ def update_user(conn,update_sql,*params):
         if len(params)==2:
             c.execute(update_sql,(params[0],params[1]))
             conn.commit()
-        elif len(params)==3:
-            c.execute(update_sql,(params[0],params[1],params[2]))
+        elif len(params)==4:
+            c.execute(update_sql,(params[0],params[1],params[2],params[3]))
             conn.commit()
     except Error as e:
         print(e)
@@ -155,10 +152,6 @@ def main():
     print('<testing environment>')
     conn = create_connection("pythonsqlite.db")
     create_db(conn)
-
-    select_all_users = "SELECT * FROM users;"
-
-    select_all(conn,select_all_users)
     
     
 if __name__ == '__main__':

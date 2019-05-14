@@ -116,15 +116,14 @@ def flag_handler():
         db.update_user(conn,update_sql,'',body.get('deviceId'))
 
         user = db.getUserByName(conn,loggin_attempt[0])
-        update_sql="UPDATE auth SET scanned=?  WHERE double_name=?;"
+        print(user)
+        update_sql="UPDATE auth SET scanned=?, data=?  WHERE double_name=?;"
         db.update_auth(conn,update_sql,1,'',loggin_attempt[0])
+        print('update device id')
         update_sql="UPDATE users SET device_id =?  WHERE double_name=?;"
         db.update_user(conn,update_sql,body.get('deviceId'),loggin_attempt[0])
+        
         sio.emit('scannedFlag', room=user[1])
-    
-        device_id=body.get('deviceId')
-        update_user_sql="UPDATE users SET device_id =?  WHERE double_name=?;"
-        db.update_user(conn,update_user_sql, device_id, user[0])
         return Response("Ok")
     else:
         return Response('User not found', status=404)
