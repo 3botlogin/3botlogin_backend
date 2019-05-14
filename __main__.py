@@ -52,8 +52,10 @@ def registration_handler(data):
     email=data.get('email')
     sid = request.sid
     publickey=data.get('publicKey')
-    update_sql="INSERT into users (double_name, sid, email, public_key) VALUES(?,?,?,?);"
-    db.insert_user(conn,update_sql,doublename, sid, email ,publickey)
+    user = db.getUserByName(conn,doublename)
+    if (user is None) :
+        update_sql="INSERT into users (double_name, sid, email, public_key) VALUES(?,?,?,?);"
+        db.insert_user(conn,update_sql,doublename, sid, email ,publickey)
 
 @sio.on('login')
 def login_handler(data):
@@ -101,6 +103,8 @@ def force_refetch_handler():
         )
         print(data)
         return response
+    else:
+        return Response()
         
 
 @app.route('/api/flag', methods=['POST'])
