@@ -1,11 +1,16 @@
 #!/bin/bash
-echo "Please enter the doublename you want to remove: "
-
 if [ -z $1 ]
 then
+	echo "Please enter the doublename you want to remove: "
 	read doubleName
 else
-	doubleName=$1
+	if [ $1 == "-list" ]
+	then
+		sqlite3 pythonsqlite.db "select * from users"
+		exit 0
+	else
+		doubleName=$1
+	fi
 fi
 
 
