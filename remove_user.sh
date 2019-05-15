@@ -6,13 +6,16 @@ then
 else
 	if [ $1 == "-list" ]
 	then
+		echo "Users: "
 		sqlite3 pythonsqlite.db "select * from users"
+		echo ""
+		echo "Auths: "
+		sqlite3 pythonsqlite.db "select * from auth"
 		exit 0
 	else
 		doubleName=$1
 	fi
 fi
-
 
 echo ""
 sql=$(sqlite3 pythonsqlite.db "select double_name, email from users where double_name = '$doubleName'")
