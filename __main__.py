@@ -112,23 +112,43 @@ def flag_handler():
     print('')
     body = request.get_json()
     print('< flag', body)
-    loggin_attempt = db.getAuthByHash(conn,body.get('hash'))
-    print(loggin_attempt)
-    if loggin_attempt:
+    login_attempt = db.getAuthByHash(conn,body.get('hash'))
+    user = db.getUserByName(conn,login_attempt[0])
+    if login_attempt and user:
+        print("login_attempt " + json.dumps(login_attempt))
+        print("user    " + json.dumps(user))
+        try:
+            public_key = base64.b64decode(user[3])
+            print('public_key ')
+            signed_device_id = base64.b64decode(body.get('deviceId'))
+            print('signed_device_id ')
+            bytes_signed_device_id = bytes(signed_device_id)
+            print('bytes_signed_device_id ')
+            verify_key = nacl.signing.VerifyKey(public_key.hex(), encoder=nacl.encoding.HexEncoder)
+            print('VerifyKey ok')
+            verified_device_id = verify_key.verify(bytes_signed_device_id)
+            print('Validation ok')
+            if verified_device_id:
+                verified_device_id = verified_device_id.decode("utf-8")                 
+                print("verified_device_id " + verified_device_id)
 
-        update_sql="UPDATE users SET device_id=?  WHERE device_id=?;"
-        db.update_user(conn,update_sql,'',body.get('deviceId'))
+                update_sql="UPDATE users SET device_id=?  WHERE device_id=?;"
+                db.update_user(conn,update_sql,'',verified_device_id)
 
-        user = db.getUserByName(conn,loggin_attempt[0])
-        print(user)
-        update_sql="UPDATE auth SET scanned=?, data=?  WHERE double_name=?;"
-        db.update_auth(conn,update_sql,1,'',loggin_attempt[0])
-        print('update device id')
-        update_sql="UPDATE users SET device_id =?  WHERE double_name=?;"
-        db.update_user(conn,update_sql,body.get('deviceId'),loggin_attempt[0])
-        
-        sio.emit('scannedFlag', room=user[1])
-        return Response("Ok")
+                update_sql="UPDATE auth SET scanned=?, data=?  WHERE double_name=?;"
+                db.update_auth(conn,update_sql,1,'',login_attempt[0])
+
+                print('update device id for '+ login_attempt[0])
+                update_sql="UPDATE users SET device_id =?  WHERE double_name=?;"
+                db.update_user(conn,update_sql,verified_device_id,login_attempt[0])
+                
+                sio.emit('scannedFlag', room=user[1])
+            return Response("Ok")
+        except Exception as e:
+            print("OOPS")
+            print(e)
+            print("OOPS")
+            return Response("Sinature invalid", status=400)
     else:
         return Response('User not found', status=404)
 
@@ -225,7 +245,7 @@ def get_user_handler(doublename):
         return response
     else:
         print('is none')
-        return Response(None)
+        return Response('User not found', status=404)
 
 @app.route('/api/users/<doublename>/emailverified', methods=['post'])
 def set_email_verified_handler(doublename):
