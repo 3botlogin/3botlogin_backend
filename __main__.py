@@ -151,7 +151,8 @@ def sign_handler():
         print()
         sio.emit('signed', {
             'signedHash': body.get('signedHash'),
-            'data': body.get('data')
+            'data': body.get('data'),
+            'selectedImageId': body.get('selectedImageId')
         }, room=user[1])      
         return Response("Ok")
     else:
