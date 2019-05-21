@@ -171,7 +171,8 @@ def sign_handler():
         print()
         sio.emit('signed', {
             'signedHash': body.get('signedHash'),
-            'data': body.get('data')
+            'data': body.get('data'),
+            'selectedImageId': body.get('selectedImageId')
         }, room=user[1])      
         return Response("Ok")
     else:
@@ -254,5 +255,9 @@ def set_email_verified_handler(doublename):
     user = db.getUserByName(conn,doublename.lower())
     push_service.notify_single_device(registration_id=user[4], message_title='Email verified', message_body='Thanks for verifying your email', data_message={'type': 'email_verification'} ,click_action='EMAIL_VERIFIED')
     return Response('Ok')
+
+@app.route('/api/minversion', methods=['get'])
+def min_version_handler():
+    return Response('16')
 
 app.run(host='0.0.0.0', port=5000)

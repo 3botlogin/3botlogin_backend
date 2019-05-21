@@ -36,3 +36,5 @@ pip install pysqlite
 
 sudo apt get install sqlite3
 
+## Config file
+Rename config.ini.example to config.ini and add your API key.
