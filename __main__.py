@@ -117,38 +117,54 @@ def flag_handler():
     if login_attempt and user:
         print("login_attempt " + json.dumps(login_attempt))
         print("user    " + json.dumps(user))
-        try:
-            public_key = base64.b64decode(user[3])
-            print('public_key ')
-            signed_device_id = base64.b64decode(body.get('deviceId'))
-            print('signed_device_id ')
-            bytes_signed_device_id = bytes(signed_device_id)
-            print('bytes_signed_device_id ')
-            verify_key = nacl.signing.VerifyKey(public_key.hex(), encoder=nacl.encoding.HexEncoder)
-            print('VerifyKey ok')
-            verified_device_id = verify_key.verify(bytes_signed_device_id)
-            print('Validation ok')
-            if verified_device_id:
-                verified_device_id = verified_device_id.decode("utf-8")                 
-                print("verified_device_id " + verified_device_id)
+        if body.get('isSigned') is None:
+            print('its not signed')
+            update_sql="UPDATE users SET device_id=?  WHERE device_id=?;"
+            db.update_user(conn,update_sql,'',body.get('deviceId'))
 
-                update_sql="UPDATE users SET device_id=?  WHERE device_id=?;"
-                db.update_user(conn,update_sql,'',verified_device_id)
-
-                update_sql="UPDATE auth SET scanned=?, data=?  WHERE double_name=?;"
-                db.update_auth(conn,update_sql,1,'',login_attempt[0])
-
-                print('update device id for '+ login_attempt[0])
-                update_sql="UPDATE users SET device_id =?  WHERE double_name=?;"
-                db.update_user(conn,update_sql,verified_device_id,login_attempt[0])
-                
-                sio.emit('scannedFlag', room=user[1])
+            user = db.getUserByName(conn,loggin_attempt[0])
+            print(user)
+            update_sql="UPDATE auth SET scanned=?, data=?  WHERE double_name=?;"
+            db.update_auth(conn,update_sql,1,'',loggin_attempt[0])
+            print('update device id')
+            update_sql="UPDATE users SET device_id =?  WHERE double_name=?;"
+            db.update_user(conn,update_sql,body.get('deviceId'),loggin_attempt[0])
+            
+            sio.emit('scannedFlag', room=user[1])
             return Response("Ok")
-        except Exception as e:
-            print("OOPS")
-            print(e)
-            print("OOPS")
-            return Response("Sinature invalid", status=400)
+        else:  
+            try:
+                public_key = base64.b64decode(user[3])
+                print('public_key ')
+                signed_device_id = base64.b64decode(body.get('deviceId'))
+                print('signed_device_id ')
+                bytes_signed_device_id = bytes(signed_device_id)
+                print('bytes_signed_device_id ')
+                verify_key = nacl.signing.VerifyKey(public_key.hex(), encoder=nacl.encoding.HexEncoder)
+                print('VerifyKey ok')
+                verified_device_id = verify_key.verify(bytes_signed_device_id)
+                print('Validation ok')
+                if verified_device_id:
+                    verified_device_id = verified_device_id.decode("utf-8")                 
+                    print("verified_device_id " + verified_device_id)
+
+                    update_sql="UPDATE users SET device_id=?  WHERE device_id=?;"
+                    db.update_user(conn,update_sql,'',verified_device_id)
+
+                    update_sql="UPDATE auth SET scanned=?, data=?  WHERE double_name=?;"
+                    db.update_auth(conn,update_sql,1,'',login_attempt[0])
+
+                    print('update device id for '+ login_attempt[0])
+                    update_sql="UPDATE users SET device_id =?  WHERE double_name=?;"
+                    db.update_user(conn,update_sql,verified_device_id,login_attempt[0])
+                    
+                    sio.emit('scannedFlag', room=user[1])
+                return Response("Ok")
+            except Exception as e:
+                print("OOPS")
+                print(e)
+                print("OOPS")
+                return Response("Sinature invalid", status=400)
     else:
         return Response('User not found', status=404)
 
