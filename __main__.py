@@ -116,19 +116,19 @@ def flag_handler():
     user = db.getUserByName(conn,login_attempt[0])
     if login_attempt and user:
         print("login_attempt " + json.dumps(login_attempt))
-        print("user    " + json.dumps(user))
+        print("user  a  " + json.dumps(user))
         if body.get('isSigned') is None:
             print('its not signed')
             update_sql="UPDATE users SET device_id=?  WHERE device_id=?;"
             db.update_user(conn,update_sql,'',body.get('deviceId'))
 
-            user = db.getUserByName(conn,loggin_attempt[0])
+            user = db.getUserByName(conn,login_attempt[0])
             print(user)
             update_sql="UPDATE auth SET scanned=?, data=?  WHERE double_name=?;"
-            db.update_auth(conn,update_sql,1,'',loggin_attempt[0])
+            db.update_auth(conn,update_sql,1,'',login_attempt[0])
             print('update device id')
             update_sql="UPDATE users SET device_id =?  WHERE double_name=?;"
-            db.update_user(conn,update_sql,body.get('deviceId'),loggin_attempt[0])
+            db.update_user(conn,update_sql,body.get('deviceId'),login_attempt[0])
             
             sio.emit('scannedFlag', room=user[1])
             return Response("Ok")
