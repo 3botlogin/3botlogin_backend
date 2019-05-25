@@ -130,7 +130,7 @@ def flag_handler():
             update_sql="UPDATE users SET device_id =?  WHERE double_name=?;"
             db.update_user(conn,update_sql,body.get('deviceId'),login_attempt[0])
             
-            sio.emit('scannedFlag', room=user[1])
+            sio.emit('scannedFlag', { signed: true }, room=user[1])
             return Response("Ok")
         else:  
             try:
@@ -158,7 +158,7 @@ def flag_handler():
                     update_sql="UPDATE users SET device_id =?  WHERE double_name=?;"
                     db.update_user(conn,update_sql,verified_device_id,login_attempt[0])
                     
-                    sio.emit('scannedFlag', room=user[1])
+                    sio.emit('scannedFlag', { signed: true }, room=user[1])
                 return Response("Ok")
             except Exception as e:
                 print("OOPS")
