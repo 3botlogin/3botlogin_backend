@@ -181,3 +181,4 @@ dmypy.json
 
 config.ini
 pythonsqlite.db
+.vscode/settings.json
