@@ -105,11 +105,11 @@ def getUserByName(conn,double_name):
         print(e)
 
 #get auth obj by state hash
-def getAuthByHash(conn, hash):
+def getAuthByStateHash(conn, sate_hash):
     find_statement="SELECT * FROM auth WHERE state_hash=? LIMIT 1;"
     try:
         c = conn.cursor()
-        c.execute(find_statement,(hash,))
+        c.execute(find_statement,(sate_hash,))
         return c.fetchone()
     except Error as e:
         print(e)
