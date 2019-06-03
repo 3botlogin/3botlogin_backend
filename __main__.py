@@ -93,7 +93,7 @@ def force_refetch_handler():
     print('< force refetch', data)
     if (data == None): return Response("Got no data", status=400)
     print('hash', data['hash'])
-    loggin_attempt = db.getAuthByHash(conn, data['hash'])
+    loggin_attempt = db.getAuthByStateHash(conn, data['hash'])
     print(loggin_attempt)
     if (loggin_attempt != None):
         data = {"scanned": loggin_attempt[3], "signed": loggin_attempt[4]}
@@ -112,7 +112,7 @@ def flag_handler():
     print('')
     body = request.get_json()
     print('< flag', body)
-    login_attempt = db.getAuthByHash(conn,body.get('hash'))
+    login_attempt = db.getAuthByStateHash(conn,body.get('hash'))
     user = db.getUserByName(conn,login_attempt[0])
     if login_attempt and user:
         print("login_attempt " + json.dumps(login_attempt))
@@ -130,7 +130,7 @@ def flag_handler():
             update_sql="UPDATE users SET device_id =?  WHERE double_name=?;"
             db.update_user(conn,update_sql,body.get('deviceId'),login_attempt[0])
             
-            sio.emit('scannedFlag', { signed: true }, room=user[1])
+            sio.emit('scannedFlag', { 'scanned': True }, room=user[1])
             return Response("Ok")
         else:  
             try:
@@ -174,17 +174,13 @@ def sign_handler():
     print('')
     body = request.get_json()
     print('< sign', body)
-    login_attempt = db.getAuthByHash(conn,body.get('hash'))
+    login_attempt = db.getAuthByStateHash(conn,body.get('hash'))
     if login_attempt != None:
         print(login_attempt)
         user = db.getUserByName(conn,login_attempt[0])
         print(user)
         update_sql="UPDATE auth SET singed_statehash =?, data=?  WHERE state_hash=?;"
         db.update_auth(conn,update_sql,body.get('signedHash'), json.dumps(body.get('data')),body.get('hash'))
-        login_attempt = db.getAuthByHash(conn,body.get('hash'))
-        print()
-        print(user[1])
-        print()
         sio.emit('signed', {
             'signedHash': body.get('signedHash'),
             'data': body.get('data'),
@@ -219,7 +215,7 @@ def verify_handler():
     body = request.get_json()
     print('< verify', body)
     user = db.getUserByName(conn,body.get('username'))
-    login_attempt = db.getAuthByHash(conn,body.get('hash'))
+    login_attempt = db.getAuthByStateHash(conn,body.get('hash'))
     if user and login_attempt:
         requested_datetime = datetime.strptime(login_attempt[2], '%Y-%m-%d %H:%M:%S.%f')
         max_datetime = requested_datetime + timedelta(minutes=10)
