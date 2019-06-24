@@ -1,8 +1,8 @@
-#!/usr/bin/env python3
 from flask import Flask, Response, request, json
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 from datetime import datetime, timedelta
+import sys
 import time
 import nacl.signing
 import nacl.encoding
@@ -13,6 +13,7 @@ from pyfcm import FCMNotification
 import configparser
 import database as db
 
+epoch = datetime.utcfromtimestamp(0)
 conn = db.create_connection("pythonsqlite.db") #connection
 db.create_db(conn) # create tables
 
@@ -195,6 +196,35 @@ def sign_handler():
 def get_attempts_handler(doublename):
     print('')
     print('< get attempts', doublename.lower())
+    
+    try:
+        auth_header = request.headers.get('Jimber-Authorization')
+
+        if (auth_header is not None):
+            timestamp = verify_signed_data(doublename, auth_header)
+
+            if timestamp:
+                timestamp = timestamp.decode('utf-8')
+                readable_signed_timestamp = datetime.fromtimestamp(int(timestamp) / 1000)
+                current_timestamp = time.time() * 1000
+                readable_current_timestamp = datetime.fromtimestamp(int(current_timestamp / 1000))
+                difference = (int(timestamp) - int(current_timestamp)) / 1000
+                if difference < 30:
+                    print('Verification succeeded.')
+                    print('Signed  Timestamp: ', readable_signed_timestamp)
+                    print('current Timestamp: ', readable_current_timestamp)
+                    print('Difference(s): ', difference)
+                else:
+                    print('Timestamp has expired.')
+            else:
+                print('Timestamp could not be verified.')
+        else:
+            print('auth_header was not present.')
+    except:
+        print("Something went wrong while trying to verify the Jimber-Authorization header.")
+
+    
+
     login_attempt = db.getAuthByDoubleName(conn, doublename.lower())
     print('>', login_attempt)
     if (login_attempt is not None):
@@ -271,5 +301,24 @@ def set_email_verified_handler(doublename):
 @app.route('/api/minversion', methods=['get'])
 def min_version_handler():
     return Response('16')
+
+def verify_signed_data(double_name, data):
+    print("Verifying data: ", data)
+
+    decoded_data = base64.b64decode(data)
+    print("Decoding data: ", decoded_data)
+
+    bytes_data = bytes(decoded_data)
+
+    public_key = base64.b64decode(db.getUserByName(conn, double_name)[3])
+    print('Retrieving public key from: ', double_name)
+
+    verify_key = nacl.signing.VerifyKey(public_key.hex(), encoder=nacl.encoding.HexEncoder)
+    print('verify_key: ', verify_key)
+
+    verified_signed_data = verify_key.verify(bytes_data)
+    print('verified_signed_data: ', verified_signed_data)
+
+    return verified_signed_data
 
 app.run(host='0.0.0.0', port=5000)
