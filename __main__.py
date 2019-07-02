@@ -336,7 +336,7 @@ def save_derived_public_key():
             result = db.select_from_userapps(conn, "SELECT * from userapps WHERE double_name=? and user_app_id=?", doubleName, appId)
             return result
     except Exception as e:
-        return Response(f'Error during verification/persistance in save_derived_public_key: {str(e)}', status=500)
+        return Response('Error during verification/persistance in save_derived_public_key: ', status=500)
 
 
 @app.route('/api/minversion', methods=['get'])
