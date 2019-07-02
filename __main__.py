@@ -14,8 +14,8 @@ import configparser
 import database as db
 
 epoch = datetime.utcfromtimestamp(0)
-conn = db.create_connection("pythonsqlite.db") #connection
-db.create_db(conn) # create tables
+conn = db.create_connection("pythonsqlite.db")  # connection
+db.create_db(conn)  # create tables
 
 print(conn)
 
@@ -27,36 +27,40 @@ app = Flask(__name__)
 sio = SocketIO(app)
 CORS(app, resources={r"*": {"origins": ["*"]}})
 
+
 @sio.on('connect')
 def connect_handler():
     print('Connected!')
+
 
 @sio.on('checkname')
 def checkname_handler(data):
     print('')
     print('< checkname', data)
     sid = request.sid
-    user = db.getUserByName(conn,data.get('doubleName').lower())
-    print("-------->",user)
+    user = db.getUserByName(conn, data.get('doubleName').lower())
+    print("-------->", user)
     if user:
         emit('nameknown')
     else:
         emit('namenotknown')
     print('')
 
+
 @sio.on('register')
 def registration_handler(data):
     print('')
     print('< register', data)
     print('')
-    doublename=data.get('doubleName').lower()
-    email=data.get('email')
+    doublename = data.get('doubleName').lower()
+    email = data.get('email')
     sid = request.sid
-    publickey=data.get('publicKey')
-    user = db.getUserByName(conn,doublename)
-    if (user is None) :
-        update_sql="INSERT into users (double_name, sid, email, public_key) VALUES(?,?,?,?);"
-        db.insert_user(conn,update_sql,doublename, sid, email ,publickey)
+    publickey = data.get('publicKey')
+    user = db.getUserByName(conn, doublename)
+    if (user is None):
+        update_sql = "INSERT into users (double_name, sid, email, public_key) VALUES(?,?,?,?);"
+        db.insert_user(conn, update_sql, doublename, sid, email, publickey)
+
 
 @sio.on('login')
 def login_handler(data):
@@ -65,34 +69,40 @@ def login_handler(data):
     data['type'] = 'login'
 
     sid = request.sid
-    user = db.getUserByName(conn,data.get('doubleName').lower())
+    user = db.getUserByName(conn, data.get('doubleName').lower())
     if user:
         print('found user', user)
-        update_sql="UPDATE users SET sid=?  WHERE double_name=?;"
-        db.update_user(conn,update_sql,sid,user[0])
+        update_sql = "UPDATE users SET sid=?  WHERE double_name=?;"
+        db.update_user(conn, update_sql, sid, user[0])
 
     if data.get('firstTime') == False:
-        user = db.getUserByName(conn,data.get('doubleName').lower())
-        push_service.notify_single_device(registration_id=user[4], message_title='Finish login', message_body='Tap to finish login', data_message=data, click_action='FLUTTER_NOTIFICATION_CLICK' )
+        user = db.getUserByName(conn, data.get('doubleName').lower())
+        push_service.notify_single_device(registration_id=user[4], message_title='Finish login',
+                                          message_body='Tap to finish login', data_message=data, click_action='FLUTTER_NOTIFICATION_CLICK')
     print('')
-    insert_auth_sql="INSERT INTO auth (double_name,state_hash,timestamp,scanned,data) VALUES (?,?,?,?,?);"
-    db.insert_auth(conn,insert_auth_sql,data.get('doubleName').lower(),data.get('state'), datetime.now(),0, json.dumps(data))
+    insert_auth_sql = "INSERT INTO auth (double_name,state_hash,timestamp,scanned,data) VALUES (?,?,?,?,?);"
+    db.insert_auth(conn, insert_auth_sql, data.get('doubleName').lower(
+    ), data.get('state'), datetime.now(), 0, json.dumps(data))
+
 
 @sio.on('resend')
 def resend_handler(data):
     print('')
     print('< resend', data)
-    user = db.getUserByName(conn,data.get('doubleName').lower())
+    user = db.getUserByName(conn, data.get('doubleName').lower())
     data['type'] = 'login'
-    push_service.notify_single_device(registration_id=user[4], message_title='Finish login', message_body='Tap to finish login', data_message=data, click_action='FLUTTER_NOTIFICATION_CLICK' )
+    push_service.notify_single_device(registration_id=user[4], message_title='Finish login',
+                                      message_body='Tap to finish login', data_message=data, click_action='FLUTTER_NOTIFICATION_CLICK')
     print('')
+
 
 @app.route('/api/forcerefetch', methods=['GET'])
 def force_refetch_handler():
     print('')
     data = request.args
     print('< force refetch', data)
-    if (data == None): return Response("Got no data", status=400)
+    if (data == None):
+        return Response("Got no data", status=400)
     print('hash', data['hash'])
     loggin_attempt = db.getAuthByStateHash(conn, data['hash'])
     print(loggin_attempt)
@@ -106,34 +116,35 @@ def force_refetch_handler():
         return response
     else:
         return Response()
-        
+
 
 @app.route('/api/flag', methods=['POST'])
 def flag_handler():
     print('')
     body = request.get_json()
     print('< flag', body)
-    login_attempt = db.getAuthByStateHash(conn,body.get('hash'))
-    user = db.getUserByName(conn,login_attempt[0])
+    login_attempt = db.getAuthByStateHash(conn, body.get('hash'))
+    user = db.getUserByName(conn, login_attempt[0])
     if login_attempt and user:
         print("login_attempt " + json.dumps(login_attempt))
         print("user  a  " + json.dumps(user))
         if body.get('isSigned') is None:
             print('its not signed')
-            update_sql="UPDATE users SET device_id=?  WHERE device_id=?;"
-            db.update_user(conn,update_sql,'',body.get('deviceId'))
+            update_sql = "UPDATE users SET device_id=?  WHERE device_id=?;"
+            db.update_user(conn, update_sql, '', body.get('deviceId'))
 
-            user = db.getUserByName(conn,login_attempt[0])
+            user = db.getUserByName(conn, login_attempt[0])
             print(user)
-            update_sql="UPDATE auth SET scanned=?, data=?  WHERE double_name=?;"
-            db.update_auth(conn,update_sql,1,'',login_attempt[0])
+            update_sql = "UPDATE auth SET scanned=?, data=?  WHERE double_name=?;"
+            db.update_auth(conn, update_sql, 1, '', login_attempt[0])
             print('update device id')
-            update_sql="UPDATE users SET device_id =?  WHERE double_name=?;"
-            db.update_user(conn,update_sql,body.get('deviceId'),login_attempt[0])
-            
-            sio.emit('scannedFlag', { 'scanned': True }, room=user[1])
+            update_sql = "UPDATE users SET device_id =?  WHERE double_name=?;"
+            db.update_user(conn, update_sql, body.get(
+                'deviceId'), login_attempt[0])
+
+            sio.emit('scannedFlag', {'scanned': True}, room=user[1])
             return Response("Ok")
-        else:  
+        else:
             try:
                 public_key = base64.b64decode(user[3])
                 print('public_key ')
@@ -141,25 +152,27 @@ def flag_handler():
                 print('signed_device_id ')
                 bytes_signed_device_id = bytes(signed_device_id)
                 print('bytes_signed_device_id ')
-                verify_key = nacl.signing.VerifyKey(public_key.hex(), encoder=nacl.encoding.HexEncoder)
+                verify_key = nacl.signing.VerifyKey(
+                    public_key.hex(), encoder=nacl.encoding.HexEncoder)
                 print('VerifyKey ok')
                 verified_device_id = verify_key.verify(bytes_signed_device_id)
                 print('Validation ok')
                 if verified_device_id:
-                    verified_device_id = verified_device_id.decode("utf-8")                 
+                    verified_device_id = verified_device_id.decode("utf-8")
                     print("verified_device_id " + verified_device_id)
 
-                    update_sql="UPDATE users SET device_id=?  WHERE device_id=?;"
-                    db.update_user(conn,update_sql,'',verified_device_id)
+                    update_sql = "UPDATE users SET device_id=?  WHERE device_id=?;"
+                    db.update_user(conn, update_sql, '', verified_device_id)
 
-                    update_sql="UPDATE auth SET scanned=?, data=?  WHERE double_name=?;"
-                    db.update_auth(conn,update_sql,1,'',login_attempt[0])
+                    update_sql = "UPDATE auth SET scanned=?, data=?  WHERE double_name=?;"
+                    db.update_auth(conn, update_sql, 1, '', login_attempt[0])
 
-                    print('update device id for '+ login_attempt[0])
-                    update_sql="UPDATE users SET device_id =?  WHERE double_name=?;"
-                    db.update_user(conn,update_sql,verified_device_id,login_attempt[0])
-                    
-                    sio.emit('scannedFlag', { 'scanned': True }, room=user[1])
+                    print('update device id for ' + login_attempt[0])
+                    update_sql = "UPDATE users SET device_id =?  WHERE double_name=?;"
+                    db.update_user(conn, update_sql,
+                                   verified_device_id, login_attempt[0])
+
+                    sio.emit('scannedFlag', {'scanned': True}, room=user[1])
                 return Response("Ok")
             except Exception as e:
                 print("OOPS")
@@ -175,18 +188,19 @@ def sign_handler():
     print('')
     body = request.get_json()
     print('< sign', body)
-    login_attempt = db.getAuthByStateHash(conn,body.get('hash'))
+    login_attempt = db.getAuthByStateHash(conn, body.get('hash'))
     if login_attempt != None:
         print(login_attempt)
-        user = db.getUserByName(conn,login_attempt[0])
+        user = db.getUserByName(conn, login_attempt[0])
         print(user)
-        update_sql="UPDATE auth SET singed_statehash =?, data=?  WHERE state_hash=?;"
-        db.update_auth(conn,update_sql,body.get('signedHash'), json.dumps(body.get('data')),body.get('hash'))
+        update_sql = "UPDATE auth SET singed_statehash =?, data=?  WHERE state_hash=?;"
+        db.update_auth(conn, update_sql, body.get('signedHash'),
+                       json.dumps(body.get('data')), body.get('hash'))
         sio.emit('signed', {
             'signedHash': body.get('signedHash'),
             'data': body.get('data'),
             'selectedImageId': body.get('selectedImageId')
-        }, room=user[1])      
+        }, room=user[1])
         return Response("Ok")
     else:
         return Response("Something went wrong", status=500)
@@ -196,7 +210,7 @@ def sign_handler():
 def get_attempts_handler(doublename):
     print('')
     print('< get attempts', doublename.lower())
-    
+
     try:
         auth_header = request.headers.get('Jimber-Authorization')
 
@@ -205,15 +219,17 @@ def get_attempts_handler(doublename):
 
             if timestamp:
                 timestamp = timestamp.decode('utf-8')
-                readable_signed_timestamp = datetime.fromtimestamp(int(timestamp) / 1000)
+                readable_signed_timestamp = datetime.fromtimestamp(
+                    int(timestamp) / 1000)
                 current_timestamp = time.time() * 1000
-                readable_current_timestamp = datetime.fromtimestamp(int(current_timestamp / 1000))
+                readable_current_timestamp = datetime.fromtimestamp(
+                    int(current_timestamp / 1000))
                 difference = (int(timestamp) - int(current_timestamp)) / 1000
                 if difference < 30:
                     print('Verification succeeded.')
                     print('Signed  Timestamp: ', readable_signed_timestamp)
                     print('current Timestamp: ', readable_current_timestamp)
-                    print('Difference(s): ', difference)
+                    print('Difference(in seconds): ', difference)
                 else:
                     print('Timestamp has expired.')
             else:
@@ -221,9 +237,8 @@ def get_attempts_handler(doublename):
         else:
             print('auth_header was not present.')
     except:
-        print("Something went wrong while trying to verify the Jimber-Authorization header.")
-
-    
+        print(
+            "Something went wrong while trying to verify the Jimber-Authorization header.")
 
     login_attempt = db.getAuthByDoubleName(conn, doublename.lower())
     print('>', login_attempt)
@@ -244,10 +259,11 @@ def verify_handler():
     print('')
     body = request.get_json()
     print('< verify', body)
-    user = db.getUserByName(conn,body.get('username'))
-    login_attempt = db.getAuthByStateHash(conn,body.get('hash'))
+    user = db.getUserByName(conn, body.get('username'))
+    login_attempt = db.getAuthByStateHash(conn, body.get('hash'))
     if user and login_attempt:
-        requested_datetime = datetime.strptime(login_attempt[2], '%Y-%m-%d %H:%M:%S.%f')
+        requested_datetime = datetime.strptime(
+            login_attempt[2], '%Y-%m-%d %H:%M:%S.%f')
         max_datetime = requested_datetime + timedelta(minutes=10)
         if requested_datetime < max_datetime:
             public_key = base64.b64decode(user[3])
@@ -257,7 +273,8 @@ def verify_handler():
             try:
                 bytes_signed_hash = bytes(signed_hash)
                 bytes_original_hash = bytes(original_hash, encoding='utf8')
-                verify_key = nacl.signing.VerifyKey(public_key.hex(), encoder=nacl.encoding.HexEncoder)
+                verify_key = nacl.signing.VerifyKey(
+                    public_key.hex(), encoder=nacl.encoding.HexEncoder)
                 verify_key.verify(bytes_original_hash, bytes_signed_hash)
                 return Response("Ok")
             except:
@@ -267,6 +284,7 @@ def verify_handler():
 
     else:
         return Response("Oops.. user or loggin attempt not found", status=404)
+
 
 @app.route('/api/users/<doublename>', methods=['GET'])
 def get_user_handler(doublename):
@@ -290,19 +308,44 @@ def get_user_handler(doublename):
         print('is none')
         return Response('User not found', status=404)
 
+
 @app.route('/api/users/<doublename>/emailverified', methods=['post'])
 def set_email_verified_handler(doublename):
     print('')
     print('< get user', doublename.lower())
-    user = db.getUserByName(conn,doublename.lower())
-    push_service.notify_single_device(registration_id=user[4], message_title='Email verified', message_body='Thanks for verifying your email', data_message={'type': 'email_verification'} ,click_action='EMAIL_VERIFIED')
+    user = db.getUserByName(conn, doublename.lower())
+    push_service.notify_single_device(registration_id=user[4], message_title='Email verified', message_body='Thanks for verifying your email', data_message={
+                                      'type': 'email_verification'}, click_action='EMAIL_VERIFIED')
     return Response('Ok')
+
+
+@app.route('/api/savederivedpublickey', methods=['POST'])
+def save_derived_public_key():
+    body = request.get_json()
+
+    try:
+        doubleName = body.get('doubleName')
+        derivedPublicKey = verify_signed_data(doubleName, body.get('signedDerivedPublicKey')).decode(encoding='utf-8')
+        appId = verify_signed_data(doubleName, body.get('signedAppId')).decode(encoding='utf-8')
+
+        if doubleName and derivedPublicKey and appId:
+            print("INSERTING DATA!")
+            insert_statement = "INSERT into userapps (double_name, user_app_id, user_app_derived_pk) VALUES(?,?,?);"
+            db.insert_app_derived_public_key(conn, insert_statement, doubleName, appId, derivedPublicKey)
+
+            result = db.select_from_userapps(conn, "SELECT * from userapps WHERE double_name=? and user_app_id=?", doubleName, appId)
+            return result
+    except Exception as e:
+        return f'Error during verification/persistance in save_derived_public_key: {str(e)}', 500
+
 
 @app.route('/api/minversion', methods=['get'])
 def min_version_handler():
     return Response('16')
 
+
 def verify_signed_data(double_name, data):
+    print('/n### --- data verification --- ###')
     print("Verifying data: ", data)
 
     decoded_data = base64.b64decode(data)
@@ -313,12 +356,15 @@ def verify_signed_data(double_name, data):
     public_key = base64.b64decode(db.getUserByName(conn, double_name)[3])
     print('Retrieving public key from: ', double_name)
 
-    verify_key = nacl.signing.VerifyKey(public_key.hex(), encoder=nacl.encoding.HexEncoder)
+    verify_key = nacl.signing.VerifyKey(
+        public_key.hex(), encoder=nacl.encoding.HexEncoder)
     print('verify_key: ', verify_key)
 
     verified_signed_data = verify_key.verify(bytes_data)
     print('verified_signed_data: ', verified_signed_data)
+    print('### --- END data verification --- ###/n')
 
     return verified_signed_data
+
 
 app.run(host='0.0.0.0', port=5000)
