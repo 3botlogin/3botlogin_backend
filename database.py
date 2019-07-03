@@ -3,8 +3,6 @@ from sqlite3 import Error
 from flask import g
 from datetime import datetime, timedelta
 import time
-# create a database connection to a SQLite database
-
 
 def create_connection(db_file):
     try:
@@ -15,8 +13,6 @@ def create_connection(db_file):
 
     return None
 
-# create table users
-
 
 def create_table(conn, create_table_sql):
     try:
@@ -24,8 +20,6 @@ def create_table(conn, create_table_sql):
         c.execute(create_table_sql)
     except Error as e:
         print(e)
-
-# setting user doublename, email & public key
 
 
 def insert_user(conn, insert_user_sql, *params):
@@ -38,8 +32,6 @@ def insert_user(conn, insert_user_sql, *params):
     except Error as e:
         print(e)
 
-
-
 def insert_app_derived_public_key(conn, insert_user_sql, *params):
     print("insert_app_derived_public_key!")
     try:
@@ -51,8 +43,6 @@ def insert_app_derived_public_key(conn, insert_user_sql, *params):
     except Error as e:
         print(e)
 
-# setting login attempt double name, state hash, timestamp & scanned
-
 
 def insert_auth(conn, insert_user_sql, dn, state, ts, s, data):
     delete_auth_for_user(conn, dn)
@@ -62,7 +52,6 @@ def insert_auth(conn, insert_user_sql, dn, state, ts, s, data):
         conn.commit()
     except Error as e:
         print(e)
-
 
 def delete_auth_for_user(conn, double_name):
     try:
@@ -113,9 +102,6 @@ def update_user(conn, update_sql, *params):
     except Error as e:
         print(e)
 
-# update signed hash from auth obj
-
-
 def update_auth(conn, update_sql, singed_statehash, data, double_name):
     try:
         c = conn.cursor()
@@ -123,9 +109,6 @@ def update_auth(conn, update_sql, singed_statehash, data, double_name):
         conn.commit()
     except Error as e:
         print(e)
-
-# get use obj ny name
-
 
 def getUserByName(conn, double_name):
     find_statement = "SELECT * FROM users WHERE double_name=? LIMIT 1;"
@@ -136,9 +119,6 @@ def getUserByName(conn, double_name):
     except Error as e:
         print(e)
 
-# get auth obj by state hash
-
-
 def getAuthByStateHash(conn, sate_hash):
     find_statement = "SELECT * FROM auth WHERE state_hash=? LIMIT 1;"
     try:
@@ -147,9 +127,6 @@ def getAuthByStateHash(conn, sate_hash):
         return c.fetchone()
     except Error as e:
         print(e)
-
-# get auth obj by deviceId
-
 
 def getAuthByDoubleName(conn, doublename):
     try:
@@ -165,9 +142,6 @@ def getAuthByDoubleName(conn, doublename):
             return None
     except Error as e:
         print(e)
-
-# db init making tables users & auth(=login attempts)
-
 
 def create_db(conn):
     # create user table statement
@@ -207,8 +181,6 @@ def create_db(conn):
     else:
         print("Error! cannot create the database connection.")
 
-
-# main() is only for testing purposes
 def main():
     # #connection db
     # #set other path --> now: default path in project (PATH/<name>.db)

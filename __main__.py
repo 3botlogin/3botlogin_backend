@@ -335,6 +335,8 @@ def save_derived_public_key():
 
             result = db.select_from_userapps(conn, "SELECT * from userapps WHERE double_name=? and user_app_id=?", doubleName, appId)
             return result
+        else:
+            print('Data was not valid: ' + doubleName + ", " + derivedPublicKey + ", " + appId)
     except Exception as e:
         return Response('Error during verification/persistance in save_derived_public_key: ', status=500)
 
