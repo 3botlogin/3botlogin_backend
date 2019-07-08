@@ -214,6 +214,7 @@ def get_attempts_handler(doublename):
     try:
         auth_header = request.headers.get('Jimber-Authorization')
 
+        print('auth_header: ', auth_header)
         if (auth_header is not None):
             timestamp = verify_signed_data(doublename, auth_header)
 
@@ -231,14 +232,17 @@ def get_attempts_handler(doublename):
                     print('current Timestamp: ', readable_current_timestamp)
                     print('Difference(in seconds): ', difference)
                 else:
-                    print('Timestamp has expired.')
+                    print('Signed timestamp inside the header has expired')
+                    # return Response("Signed timestamp inside the header has expired", status=400)
             else:
-                print('Timestamp could not be verified.')
+                print('Signed timestamp inside the header could not be verified')
+                # return Response("Signed timestamp inside the header could not be verified", status=400)
         else:
-            print('auth_header was not present.')
+            print('Header was not present')
+            # return Response("Header was not present", status=400)
     except:
-        print(
-            "Something went wrong while trying to verify the Jimber-Authorization header.")
+        print("Something went wrong while trying to verify the header")
+        # return Response("Something went wrong while trying to verify the header", status=400)
 
     login_attempt = db.getAuthByDoubleName(conn, doublename.lower())
     print('>', login_attempt)
@@ -252,7 +256,6 @@ def get_attempts_handler(doublename):
     else:
         print('is none')
         return Response("No login attempts found", status=204)
-
 
 @app.route('/api/verify', methods=['POST'])
 def verify_handler():
@@ -284,7 +287,6 @@ def verify_handler():
 
     else:
         return Response("Oops.. user or loggin attempt not found", status=404)
-
 
 @app.route('/api/users/<doublename>', methods=['GET'])
 def get_user_handler(doublename):
