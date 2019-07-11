@@ -81,6 +81,29 @@ def select_from_userapps(conn, statement, *params):
     except Error as e:
         print(e)
 
+def update_deviceid(conn, device_id, doublename):
+    try:
+        print("update_deviceid")
+        delete_sql = "UPDATE users SET device_id = ? WHERE double_name=?;"
+        c = conn.cursor()
+        c.execute(delete_sql, (device_id, doublename))
+        conn.commit()
+    except Error as e:
+        print(e)
+
+def get_deviceid(conn, doublename):
+    # 
+    try:
+        print("get_deviceid")
+        print("doublename: " + doublename)
+        select_sql = "SELECT device_id FROM users where double_name=?;"
+        c = conn.cursor()
+        c.execute(select_sql, (doublename,))
+        print("RETURNING: " + doublename)
+        return c.fetchone()
+    except Error as e:
+        print(e)
+
 def getUserByHash(conn, hash):
     find_statement = "SELECT * FROM auth WHERE state_hash=? LIMIT 1;"
     try:

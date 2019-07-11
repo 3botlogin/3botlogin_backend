@@ -1,7 +1,3 @@
-from flask import Flask, Response, request, json
-from flask_socketio import SocketIO, emit
-from flask_cors import CORS
-from datetime import datetime, timedelta
 import sys
 import time
 import nacl.signing
@@ -9,9 +5,14 @@ import nacl.encoding
 import binascii
 import struct
 import base64
-from pyfcm import FCMNotification
 import configparser
 import database as db
+
+from flask import Flask, Response, request, json
+from flask_socketio import SocketIO, emit
+from flask_cors import CORS
+from datetime import datetime, timedelta
+from pyfcm import FCMNotification
 
 epoch = datetime.utcfromtimestamp(0)
 conn = db.create_connection("pythonsqlite.db")  # connection
@@ -182,6 +183,26 @@ def flag_handler():
     else:
         return Response('User not found', status=404)
 
+@app.route('/api/users/<doublename>/deviceid', methods=['PUT'])
+def update_deviceid(doublename):
+    body = request.get_json()
+
+    try:
+        signed_device_id = body.get('signedDeviceId')
+
+        if (signed_device_id is not None):
+            device_id = verify_signed_data(doublename, signed_device_id).decode('utf-8')
+
+            if device_id:
+                print(device_id)
+                db.update_deviceid(conn, device_id, doublename)
+                return device_id
+            else:
+                print('Signed timestamp inside the header could not be verified')
+        else:
+            print('Header was not present')
+    except:
+        print("Something went wrong while trying to verify the header")
 
 @app.route('/api/sign', methods=['POST'])
 def sign_handler():
@@ -288,6 +309,52 @@ def verify_handler():
     else:
         return Response("Oops.. user or loggin attempt not found", status=404)
 
+@app.route('/api/users/<doublename>/deviceid', methods=['DELETE'])
+def remove_device_id(doublename):
+    print("remove_device_id")
+    print("doublename: " + doublename)
+
+    try:
+        auth_header = request.headers.get('Jimber-Authorization')
+
+        print('auth_header: ', auth_header)
+        if (auth_header is not None):
+            timestamp = verify_signed_data(doublename, auth_header)
+            print("timestamp: " + timestamp.decode('utf-8'))
+            if timestamp:
+                timestamp = timestamp.decode('utf-8')
+                readable_signed_timestamp = datetime.fromtimestamp(
+                    int(timestamp) / 1000)
+                current_timestamp = time.time() * 1000
+                readable_current_timestamp = datetime.fromtimestamp(
+                    int(current_timestamp / 1000))
+                difference = (int(timestamp) - int(current_timestamp)) / 1000
+                if difference < 30:
+                    print('Verification succeeded.')
+                    print('Signed  Timestamp: ', readable_signed_timestamp)
+                    print('current Timestamp: ', readable_current_timestamp)
+                    print('Difference(in seconds): ', difference)
+                    # Ayyy lets continue here. 
+                    # doublename
+                    db.update_deviceid(conn, "", doublename)
+                    device_id = db.get_deviceid(conn, doublename)[0]
+
+                    if not device_id:
+                        return Response("ok", status=200)
+
+                    return Response("something went wrong", status=404)
+                else:
+                    print('Signed timestamp inside the header has expired')
+                    # return Response("Signed timestamp inside the header has expired", status=400)
+            else:
+                print('Signed timestamp inside the header could not be verified')
+                # return Response("Signed timestamp inside the header could not be verified", status=400)
+        else:
+            print('Header was not present')
+            # return Response("Header was not present", status=400)
+    except:
+        print("Something went wrong while trying to verify the header")
+
 @app.route('/api/users/<doublename>', methods=['GET'])
 def get_user_handler(doublename):
     print('')
@@ -329,6 +396,11 @@ def save_derived_public_key():
         doubleName = body.get('doubleName')
         derivedPublicKey = verify_signed_data(doubleName, body.get('signedDerivedPublicKey')).decode(encoding='utf-8')
         appId = verify_signed_data(doubleName, body.get('signedAppId')).decode(encoding='utf-8')
+
+        print(doubleName)
+        print(derivedPublicKey)
+        print(appId)
+
 
         if doubleName and derivedPublicKey and appId:
             print("INSERTING DATA!")
