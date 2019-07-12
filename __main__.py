@@ -407,7 +407,7 @@ def save_derived_public_key():
             insert_statement = "INSERT into userapps (double_name, user_app_id, user_app_derived_pk) VALUES(?,?,?);"
             db.insert_app_derived_public_key(conn, insert_statement, doubleName, appId, derivedPublicKey)
 
-            result = db.select_from_userapps(conn, "SELECT * from userapps WHERE double_name=? and user_app_id=?", doubleName, appId)
+            result = db.select_from_userapps(conn, "SELECT * from userapps WHERE double_name=? and user_app_id=?;", doubleName, appId)
             return result
         else:
             print('Data was not valid: ' + doubleName + ", " + derivedPublicKey + ", " + appId)
