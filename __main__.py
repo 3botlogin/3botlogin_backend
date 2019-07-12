@@ -186,7 +186,7 @@ def flag_handler():
 @app.route('/api/users/<doublename>/deviceid', methods=['PUT'])
 def update_deviceid(doublename):
     body = request.get_json()
-
+    doublename = doublename.lower()
     try:
         signed_device_id = body.get('signedDeviceId')
 
@@ -313,6 +313,7 @@ def verify_handler():
 def remove_device_id(doublename):
     print("remove_device_id")
     print("doublename: " + doublename)
+    doublename = doublename.lower()
 
     try:
         auth_header = request.headers.get('Jimber-Authorization')
