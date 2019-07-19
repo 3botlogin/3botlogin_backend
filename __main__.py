@@ -73,7 +73,7 @@ def registration_handler(data):
 
 @sio.on('login')
 def login_handler(data):
-    logger.debug("Login ", data)
+    logger.debug("Login %s", data)
     data['type'] = 'login'
 
     sid = request.sid
@@ -83,7 +83,7 @@ def login_handler(data):
         update_sql = "UPDATE users SET sid=?  WHERE double_name=?;"
         db.update_user(conn, update_sql, sid, user[0])
 
-    if data.get('firstTime') == False:
+    if data.get('firstTime') == False and data.get('mobile') == False:
         user = db.getUserByName(conn, data.get('doubleName').lower())
         push_service.notify_single_device(registration_id=user[4], message_title='Finish login',
                                           message_body='Tap to finish login', data_message=data, click_action='FLUTTER_NOTIFICATION_CLICK')
@@ -103,8 +103,8 @@ def resend_handler(data):
 
 @app.route('/api/forcerefetch', methods=['GET'])
 def force_refetch_handler():
-    logger.debug("Force refetch %s", data)
     data = request.args
+    logger.debug("Force refetch %s", data)
     if (data == None):
         return Response("Got no data", status=400)
     logger.debug("Hash %s", data['hash'])
@@ -171,30 +171,6 @@ def flag_handler():
         return Response('User not found', status=404)
 
 
-@app.route('/api/users/<doublename>/deviceid', methods=['PUT'])
-def update_deviceid(doublename):
-    body = request.get_json()
-    doublename = doublename.lower()
-    logger.debug("Updating deviceid of user %s", doublename)
-    try:
-        signed_device_id = body.get('signedDeviceId')
-
-        if (signed_device_id is not None):
-            device_id = verify_signed_data(
-                doublename, signed_device_id).decode('utf-8')
-
-            if device_id:
-                logger.debug("Updating deviceid %s", device_id)
-                db.update_deviceid(conn, device_id, doublename)
-                return device_id
-            else:
-                logger.debug("Signed timestamp inside the header could not be verified")
-        else:
-            logger.debug("Header was not present")
-    except:
-        logger.debug("Something went wrong while trying to verify the header")
-
-
 @app.route('/api/sign', methods=['POST'])
 def sign_handler():
     body = request.get_json()
@@ -221,32 +197,34 @@ def get_attempts_handler(doublename):
     logger.debug("Getting attempts for %s", doublename)
     try:
         auth_header = request.headers.get('Jimber-Authorization')
-
         if (auth_header is not None):
-            timestamp = verify_signed_data(doublename, auth_header)
-
-            if timestamp:
-                timestamp = timestamp.decode('utf-8')
-                readable_signed_timestamp = datetime.fromtimestamp(
-                    int(timestamp) / 1000)
-                current_timestamp = time.time() * 1000
-                readable_current_timestamp = datetime.fromtimestamp(
-                    int(current_timestamp / 1000))
-                difference = (int(timestamp) - int(current_timestamp)) / 1000
-                if difference < 30:
-                    logger.debug("Verification succeeded.")
-                    # More code here.
+            data = verify_signed_data(doublename, auth_header)
+            if data:
+                data = json.loads(data.decode("utf-8"))
+                if(data["intention"] == "attempts"):
+                    timestamp = data["timestamp"]
+                    readable_signed_timestamp = datetime.fromtimestamp(
+                        int(timestamp) / 1000)
+                    current_timestamp = time.time() * 1000
+                    readable_current_timestamp = datetime.fromtimestamp(
+                        int(current_timestamp / 1000))
+                    difference = (int(timestamp) - int(current_timestamp)) / 1000
+                    if difference < 30:
+                        logger.debug("Verification succeeded.")
+                        # More code here.
+                    else:
+                        logger.debug("Signed timestamp inside the header has expired")
+                        # return Response("Signed timestamp inside the header has expired", status=400)
                 else:
-                    logger.debug("Signed timestamp inside the header has expired")
-                    # return Response("Signed timestamp inside the header has expired", status=400)
+                    logger.debug("Intention was not correct!")
             else:
                 logger.debug("Signed timestamp inside the header could not be verified")
                 # return Response("Signed timestamp inside the header could not be verified", status=400)
         else:
             logger.debug("Header was not present")
             # return Response("Header was not present", status=400)
-    except:
-        logger.debug("Something went wrong while trying to verify the header")
+    except Exception as e:
+        logger.debug("Something went wrong while trying to verify the header %e", e)
         # return Response("Something went wrong while trying to verify the header", status=400)
 
     login_attempt = db.getAuthByDoubleName(conn, doublename)
@@ -292,6 +270,30 @@ def verify_handler():
         return Response("Oops.. user or loggin attempt not found", status=404)
 
 
+@app.route('/api/users/<doublename>/deviceid', methods=['PUT'])
+def update_device_id(doublename):
+    body = request.get_json()
+    doublename = doublename.lower()
+    logger.debug("Updating deviceid of user %s", doublename)
+    try:
+        signed_device_id = body.get('signedDeviceId')
+
+        if (signed_device_id is not None):
+            device_id = verify_signed_data(
+                doublename, signed_device_id).decode('utf-8')
+
+            if device_id:
+                logger.debug("Updating deviceid %s", device_id)
+                db.update_deviceid(conn, device_id, doublename)
+                return device_id
+            else:
+                logger.debug("Signed timestamp inside the header could not be verified")
+        else:
+            logger.debug("Header was not present")
+    except:
+        logger.debug("Something went wrong while trying to verify the header")
+
+
 @app.route('/api/users/<doublename>/deviceid', methods=['DELETE'])
 def remove_device_id(doublename):
     doublename = doublename.lower()
@@ -301,26 +303,30 @@ def remove_device_id(doublename):
         auth_header = request.headers.get('Jimber-Authorization')
 
         if (auth_header is not None):
-            timestamp = verify_signed_data(doublename, auth_header)
+            data = verify_signed_data(doublename, auth_header)
             if timestamp:
-                timestamp = timestamp.decode('utf-8')
-                readable_signed_timestamp = datetime.fromtimestamp(
-                    int(timestamp) / 1000)
-                current_timestamp = time.time() * 1000
-                readable_current_timestamp = datetime.fromtimestamp(
-                    int(current_timestamp / 1000))
-                difference = (int(timestamp) - int(current_timestamp)) / 1000
-                if difference < 30:
-                    logger.debug("Verification succeeded.")
-                    db.update_deviceid(conn, "", doublename)
-                    device_id = db.get_deviceid(conn, doublename)[0]
+                data = json.loads(data.decode("utf-8"))
+                if(data["intention"] == "delete_deviceid"):
+                    timestamp = timestamp.decode('utf-8')
+                    logger.debug("Timestamp!")
+                    logger.debug(timestamp)
+                    readable_signed_timestamp = datetime.fromtimestamp(
+                        int(timestamp) / 1000)
+                    current_timestamp = time.time() * 1000
+                    readable_current_timestamp = datetime.fromtimestamp(
+                        int(current_timestamp / 1000))
+                    difference = (int(timestamp) - int(current_timestamp)) / 1000
+                    if difference < 30:
+                        logger.debug("Verification succeeded.")
+                        db.update_deviceid(conn, "", doublename)
+                        device_id = db.get_deviceid(conn, doublename)[0]
 
-                    if not device_id:
-                        return Response("ok", status=200)
+                        if not device_id:
+                            return Response("ok", status=200)
 
-                    return Response("something went wrong", status=404)
-                else:
-                    logger.debug("Timestamp was expired")
+                        return Response("something went wrong", status=404)
+                    else:
+                        logger.debug("Timestamp was expired")
             else:
                 logger.debug("Signed timestamp inside the header could not be verified")
         else:
@@ -364,7 +370,7 @@ def save_derived_public_key():
     body = request.get_json()
     try:
         double_name = body.get('doubleName').lower()
-        logger.debug("Saving derived public key from user %s", doublename)
+        logger.debug("Saving derived public key from user %s", double_name)
         derived_public_key = verify_signed_data(double_name, body.get(
             'signedDerivedPublicKey')).decode(encoding='utf-8')
         app_id = verify_signed_data(double_name, body.get(

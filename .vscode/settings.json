@@ -1,4 +1,5 @@
 {
     "python.linting.pylintEnabled": true,
-    "python.linting.enabled": true
+    "python.linting.enabled": true,
+    "python.pythonPath": "/home/amol/code/3botlogin/3botlogin_backend/backend_venv/bin/python3"
 }
