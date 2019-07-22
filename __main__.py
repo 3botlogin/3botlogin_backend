@@ -312,12 +312,8 @@ def remove_device_id(doublename):
             data = verify_signed_data(doublename, auth_header)
             if data:
                 data = json.loads(data.decode("utf-8"))
-                logger.debug(data)
                 if(data["intention"] == "delete-deviceid"):
-                    logger.debug("intention good!")
                     timestamp = data["timestamp"]
-                    logger.debug("Timestamp!")
-                    logger.debug(timestamp)
                     readable_signed_timestamp = datetime.fromtimestamp(
                         int(timestamp) / 1000)
                     current_timestamp = time.time() * 1000
@@ -325,26 +321,25 @@ def remove_device_id(doublename):
                         int(current_timestamp / 1000))
                     difference = (int(timestamp) - int(current_timestamp)) / 1000
                     if difference < 30:
-                        logger.debug("Verification succeeded.")
                         db.update_deviceid(conn, "", doublename)
                         device_id = db.get_deviceid(conn, doublename)[0]
 
                         if not device_id:
                             return Response("ok", status=200)
 
-                        return Response("something went wrong", status=404)
+                        return Response("something went wrong", status=400)
                     else:
                         logger.debug("Timestamp was expired")
-                        return Response("something went wrong", status=404)
+                        return Response("Request took to long", status=418)
             else:
                 logger.debug("Signed timestamp inside the header could not be verified")
                 return Response("something went wrong", status=404)
         else:
             logger.debug("Header was not present")
-            return Response("something went wrong", status=404)
+            return Response("Header was not present", status=400)
     except:
         logger.debug("Something went wrong while trying to verify the header")
-        return Response("something went wrong", status=404)
+        return Response("something went wrong", status=400)
 
 @app.route('/api/users/<doublename>', methods=['GET'])
 def get_user_handler(doublename):
