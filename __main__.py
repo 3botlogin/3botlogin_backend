@@ -307,13 +307,15 @@ def remove_device_id(doublename):
 
     try:
         auth_header = request.headers.get('Jimber-Authorization')
-
+        logger.debug(auth_header)
         if (auth_header is not None):
             data = verify_signed_data(doublename, auth_header)
-            if timestamp:
+            if data:
                 data = json.loads(data.decode("utf-8"))
-                if(data["intention"] == "delete_deviceid"):
-                    timestamp = timestamp.decode('utf-8')
+                logger.debug(data)
+                if(data["intention"] == "delete-deviceid"):
+                    logger.debug("intention good!")
+                    timestamp = data["timestamp"]
                     logger.debug("Timestamp!")
                     logger.debug(timestamp)
                     readable_signed_timestamp = datetime.fromtimestamp(
@@ -333,13 +335,16 @@ def remove_device_id(doublename):
                         return Response("something went wrong", status=404)
                     else:
                         logger.debug("Timestamp was expired")
+                        return Response("something went wrong", status=404)
             else:
                 logger.debug("Signed timestamp inside the header could not be verified")
+                return Response("something went wrong", status=404)
         else:
             logger.debug("Header was not present")
+            return Response("something went wrong", status=404)
     except:
         logger.debug("Something went wrong while trying to verify the header")
-
+        return Response("something went wrong", status=404)
 
 @app.route('/api/users/<doublename>', methods=['GET'])
 def get_user_handler(doublename):
