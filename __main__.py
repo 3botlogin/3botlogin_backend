@@ -46,6 +46,10 @@ def checkname_handler(data):
         emit('namenotknown')
     print('')
 
+@sio.on('cancel')
+def cancel_handler(data):
+    print('')
+
 
 @sio.on('register')
 def registration_handler(data):
@@ -78,7 +82,7 @@ def login_handler(data):
     if data.get('firstTime') == False:
         user = db.getUserByName(conn, data.get('doubleName').lower())
         push_service.notify_single_device(registration_id=user[4], message_title='Finish login',
-                                          message_body='Tap to finish login', data_message=data, click_action='FLUTTER_NOTIFICATION_CLICK')
+                                          message_body='Tap to finish login', data_message=data, click_action='FLUTTER_NOTIFICATION_CLICK', tag='testLogin', collapse_key='testLogin' )
     print('')
     insert_auth_sql = "INSERT INTO auth (double_name,state_hash,timestamp,scanned,data) VALUES (?,?,?,?,?);"
     db.insert_auth(conn, insert_auth_sql, data.get('doubleName').lower(
@@ -92,7 +96,7 @@ def resend_handler(data):
     user = db.getUserByName(conn, data.get('doubleName').lower())
     data['type'] = 'login'
     push_service.notify_single_device(registration_id=user[4], message_title='Finish login',
-                                      message_body='Tap to finish login', data_message=data, click_action='FLUTTER_NOTIFICATION_CLICK')
+                                      message_body='Tap to finish login', data_message=data, click_action='FLUTTER_NOTIFICATION_CLICK', collapse_key='testLogin')
     print('')
 
 
@@ -283,7 +287,7 @@ def verify_handler():
             return Response("You are too late", status=400)
 
     else:
-        return Response("Oops.. user or loggin attempt not found", status=404)
+        return Response("Oops.. user or login attempt not found", status=404)
 
 
 @app.route('/api/users/<doublename>', methods=['GET'])
@@ -308,6 +312,13 @@ def get_user_handler(doublename):
         print('is none')
         return Response('User not found', status=404)
 
+@app.route('/api/users/<doublename>/cancel', methods=['POST'])
+def cancel_login_attempt(doublename):
+    user = db.getUserByName(conn, doublename.lower())
+    db.delete_auth_for_user(conn, doublename.lower())
+    print('Cancelling')
+    sio.emit('cancelLogin', {'scanned': True}, room=user[1])
+    return Response('Canceled by User')
 
 @app.route('/api/users/<doublename>/emailverified', methods=['post'])
 def set_email_verified_handler(doublename):
