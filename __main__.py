@@ -401,10 +401,8 @@ def save_derived_public_key():
                     difference = (int(timestamp) - int(current_timestamp)) / 1000
                     if difference < 30:
                         #here code
-                         derived_public_key = verify_signed_data(double_name, body.get(
-                            'signedDerivedPublicKey')).decode(encoding='utf-8')
-                        app_id = verify_signed_data(double_name, body.get(
-                            'signedAppId')).decode(encoding='utf-8')
+                        derived_public_key = verify_signed_data(double_name, body.get('signedDerivedPublicKey')).decode(encoding='utf-8')
+                        app_id = verify_signed_data(double_name, body.get('signedAppId')).decode(encoding='utf-8')
 
                         if double_name and derived_public_key and app_id:
                             logger.debug("Signed data has been verified")
