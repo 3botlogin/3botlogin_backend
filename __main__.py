@@ -383,14 +383,17 @@ def set_email_verified_handler(doublename):
 @app.route('/api/savederivedpublickey', methods=['POST'])
 def save_derived_public_key():
     body = request.get_json()
-
+    double_name = body['doubleName']
+    logger.debug(body)
     try:
         auth_header = request.headers.get('Jimber-Authorization')
         logger.debug(auth_header)
         if (auth_header is not None):
-            data = verify_signed_data(doublename, auth_header)
+            data = verify_signed_data(double_name, auth_header)
+            logger.debug(data)
             if data:
                 data = json.loads(data.decode("utf-8"))
+                logger.debug(data)
                 if(data["intention"] == "post-savederivedpublickey"):
                     timestamp = data["timestamp"]
                     readable_signed_timestamp = datetime.fromtimestamp(
@@ -412,7 +415,8 @@ def save_derived_public_key():
 
                             result = db.select_from_userapps(
                                 conn, "SELECT * from userapps WHERE double_name=? and user_app_id=?;", double_name, app_id)
-                            return result
+                            logger.debug(result)
+                            return Response('', status=200)
                         else:
                             logger.debug("Signed data is not verified")
                     
@@ -426,8 +430,8 @@ def save_derived_public_key():
         else:
             logger.debug("Header was not present")
             return Response("Header was not present", status=400)
-    except:
-        logger.debug("Something went wrong while trying to verify the header")
+    except Exception as e:
+        logger.debug("Something went wrong while trying to verify the header %s", e)
         return Response("something went wrong", status=400)
 
 
@@ -437,24 +441,24 @@ def min_version_handler():
 
 
 def verify_signed_data(double_name, data):
-    # print('/n### --- data verification --- ###')
-    # print("Verifying data: ", data)
+    print('/n### --- data verification --- ###')
+    print("Verifying data: ", data)
 
     decoded_data = base64.b64decode(data)
-    # print("Decoding data: ", decoded_data)
+    print("Decoding data: ", decoded_data)
 
     bytes_data = bytes(decoded_data)
 
     public_key = base64.b64decode(db.getUserByName(conn, double_name)[3])
-    # print('Retrieving public key from: ', double_name)
+    print('Retrieving public key from: ', double_name)
 
     verify_key = nacl.signing.VerifyKey(
         public_key.hex(), encoder=nacl.encoding.HexEncoder)
-    # print('verify_key: ', verify_key)
+    print('verify_key: ', verify_key)
 
     verified_signed_data = verify_key.verify(bytes_data)
-    # print('verified_signed_data: ', verified_signed_data)
-    # print('### --- END data verification --- ###/n')
+    print('verified_signed_data: ', verified_signed_data)
+    print('### --- END data verification --- ###/n')
 
     return verified_signed_data
 
