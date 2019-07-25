@@ -327,12 +327,8 @@ def remove_device_id(doublename):
             data = verify_signed_data(doublename, auth_header)
             if data:
                 data = json.loads(data.decode("utf-8"))
-                logger.debug(data)
-                if(data["intention"] == "delete_deviceid"):
-                    logger.debug("intention good!")
+                if(data["intention"] == "delete-deviceid"):
                     timestamp = data["timestamp"]
-                    logger.debug("Timestamp!")
-                    logger.debug(timestamp)
                     readable_signed_timestamp = datetime.fromtimestamp(
                         int(timestamp) / 1000)
                     current_timestamp = time.time() * 1000
@@ -340,26 +336,27 @@ def remove_device_id(doublename):
                         int(current_timestamp / 1000))
                     difference = (int(timestamp) - int(current_timestamp)) / 1000
                     if difference < 30:
-                        logger.debug("Verification succeeded.")
                         db.update_deviceid(conn, "", doublename)
                         device_id = db.get_deviceid(conn, doublename)[0]
 
                         if not device_id:
                             return Response("ok", status=200)
+                        else:
+                            return Response("Device ID not found", status=200)
 
-                        return Response("something went wrong", status=404)
+                        return Response("something went wrong", status=400)
                     else:
                         logger.debug("Timestamp was expired")
-                        return Response("something went wrong", status=404)
+                        return Response("Request took to long", status=418)
             else:
                 logger.debug("Signed timestamp inside the header could not be verified")
                 return Response("something went wrong", status=404)
         else:
             logger.debug("Header was not present")
-            return Response("something went wrong", status=404)
+            return Response("Header was not present", status=400)
     except:
         logger.debug("Something went wrong while trying to verify the header")
-        return Response("something went wrong", status=404)
+        return Response("something went wrong", status=400)
 
 @app.route('/api/users/<doublename>', methods=['GET'])
 def get_user_handler(doublename):
@@ -401,27 +398,56 @@ def set_email_verified_handler(doublename):
 @app.route('/api/savederivedpublickey', methods=['POST'])
 def save_derived_public_key():
     body = request.get_json()
+    double_name = body['doubleName']
+    logger.debug(body)
     try:
-        double_name = body.get('doubleName').lower()
-        logger.debug("Saving derived public key from user %s", double_name)
-        derived_public_key = verify_signed_data(double_name, body.get(
-            'signedDerivedPublicKey')).decode(encoding='utf-8')
-        app_id = verify_signed_data(double_name, body.get(
-            'signedAppId')).decode(encoding='utf-8')
+        auth_header = request.headers.get('Jimber-Authorization')
+        logger.debug(auth_header)
+        if (auth_header is not None):
+            data = verify_signed_data(double_name, auth_header)
+            logger.debug(data)
+            if data:
+                data = json.loads(data.decode("utf-8"))
+                logger.debug(data)
+                if(data["intention"] == "post-savederivedpublickey"):
+                    timestamp = data["timestamp"]
+                    readable_signed_timestamp = datetime.fromtimestamp(
+                        int(timestamp) / 1000)
+                    current_timestamp = time.time() * 1000
+                    readable_current_timestamp = datetime.fromtimestamp(
+                        int(current_timestamp / 1000))
+                    difference = (int(timestamp) - int(current_timestamp)) / 1000
+                    if difference < 30:
+                        #here code
+                        derived_public_key = verify_signed_data(double_name, body.get('signedDerivedPublicKey')).decode(encoding='utf-8')
+                        app_id = verify_signed_data(double_name, body.get('signedAppId')).decode(encoding='utf-8')
 
-        if double_name and derived_public_key and app_id:
-            logger.debug("Signed data has been verified")
-            insert_statement = "INSERT into userapps (double_name, user_app_id, user_app_derived_pk) VALUES(?,?,?);"
-            db.insert_app_derived_public_key(
-                conn, insert_statement, double_name, app_id, derived_public_key)
+                        if double_name and derived_public_key and app_id:
+                            logger.debug("Signed data has been verified")
+                            insert_statement = "INSERT into userapps (double_name, user_app_id, user_app_derived_pk) VALUES(?,?,?);"
+                            db.insert_app_derived_public_key(
+                                conn, insert_statement, double_name, app_id, derived_public_key)
 
-            result = db.select_from_userapps(
-                conn, "SELECT * from userapps WHERE double_name=? and user_app_id=?;", double_name, app_id)
-            return result
+                            result = db.select_from_userapps(
+                                conn, "SELECT * from userapps WHERE double_name=? and user_app_id=?;", double_name, app_id)
+                            logger.debug(result)
+                            return Response('', status=200)
+                        else:
+                            logger.debug("Signed data is not verified")
+                    
+                        return Response("something went wrong", status=400)
+                    else:
+                        logger.debug("Timestamp was expired")
+                        return Response("Request took to long", status=418)
+            else:
+                logger.debug("Signed timestamp inside the header could not be verified")
+                return Response("something went wrong", status=404)
         else:
-            logger.debug("Signed data is not verified")
+            logger.debug("Header was not present")
+            return Response("Header was not present", status=400)
     except Exception as e:
-        return Response('Error during verification/persistance in save_derived_public_key', status=500)
+        logger.debug("Something went wrong while trying to verify the header %s", e)
+        return Response("something went wrong", status=400)
 
 
 @app.route('/api/minversion', methods=['get'])
@@ -430,24 +456,24 @@ def min_version_handler():
 
 
 def verify_signed_data(double_name, data):
-    # print('/n### --- data verification --- ###')
-    # print("Verifying data: ", data)
+    print('/n### --- data verification --- ###')
+    print("Verifying data: ", data)
 
     decoded_data = base64.b64decode(data)
-    # print("Decoding data: ", decoded_data)
+    print("Decoding data: ", decoded_data)
 
     bytes_data = bytes(decoded_data)
 
     public_key = base64.b64decode(db.getUserByName(conn, double_name)[3])
-    # print('Retrieving public key from: ', double_name)
+    print('Retrieving public key from: ', double_name)
 
     verify_key = nacl.signing.VerifyKey(
         public_key.hex(), encoder=nacl.encoding.HexEncoder)
-    # print('verify_key: ', verify_key)
+    print('verify_key: ', verify_key)
 
     verified_signed_data = verify_key.verify(bytes_data)
-    # print('verified_signed_data: ', verified_signed_data)
-    # print('### --- END data verification --- ###/n')
+    print('verified_signed_data: ', verified_signed_data)
+    print('### --- END data verification --- ###/n')
 
     return verified_signed_data
 
