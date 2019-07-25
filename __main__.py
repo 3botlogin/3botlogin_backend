@@ -100,6 +100,16 @@ def login_handler(data):
 @sio.on('resend')
 def resend_handler(data):
     logger.debug("Resend %s", data)
+
+
+    db.delete_auth_for_user(conn, data.get('doubleName').lower())
+
+    insert_auth_sql = "INSERT INTO auth (double_name,state_hash,timestamp,scanned,data) VALUES (?,?,?,?,?);"
+
+    db.insert_auth(conn, insert_auth_sql, data.get('doubleName').lower(
+    ), data.get('state'), datetime.now(), 0, json.dumps(data))
+
+
     user = db.getUserByName(conn, data.get('doubleName').lower())
     data['type'] = 'login'
     push_service.notify_single_device(registration_id=user[4], message_title='Finish login',
@@ -252,28 +262,33 @@ def verify_handler():
     logger.debug("Verify %s", body)
     user = db.getUserByName(conn, body.get('username'))
     login_attempt = db.getAuthByStateHash(conn, body.get('hash'))
-    if user and login_attempt:
-        requested_datetime = datetime.strptime(
-            login_attempt[2], '%Y-%m-%d %H:%M:%S.%f')
-        max_datetime = requested_datetime + timedelta(minutes=10)
-        if requested_datetime < max_datetime:
-            public_key = base64.b64decode(user[3])
-            signed_hash = base64.b64decode(login_attempt[4])
-            original_hash = login_attempt[1]
-            try:
-                bytes_signed_hash = bytes(signed_hash)
-                bytes_original_hash = bytes(original_hash, encoding='utf8')
-                verify_key = nacl.signing.VerifyKey(
-                    public_key.hex(), encoder=nacl.encoding.HexEncoder)
-                verify_key.verify(bytes_original_hash, bytes_signed_hash)
-                return Response("Ok")
-            except:
-                return Response("Sinature invalid", status=400)
-        else:
-            return Response("You are too late", status=400)
 
-    else:
-        return Response("Oops.. user or login attempt not found", status=404)
+    try: 
+        if user and login_attempt:
+            requested_datetime = datetime.strptime(
+                login_attempt[2], '%Y-%m-%d %H:%M:%S.%f')
+            max_datetime = requested_datetime + timedelta(minutes=10)
+            if requested_datetime < max_datetime:
+                public_key = base64.b64decode(user[3])
+                signed_hash = base64.b64decode(login_attempt[4])
+                original_hash = login_attempt[1]
+                try:
+                    bytes_signed_hash = bytes(signed_hash)
+                    bytes_original_hash = bytes(original_hash, encoding='utf8')
+                    verify_key = nacl.signing.VerifyKey(
+                        public_key.hex(), encoder=nacl.encoding.HexEncoder)
+                    verify_key.verify(bytes_original_hash, bytes_signed_hash)
+                    return Response("Ok")
+                except:
+                    return Response("Sinature invalid", status=400)
+            else:
+                return Response("You are too late", status=400)
+
+        else:
+            return Response("Oops.. user or login attempt not found", status=404)
+    except Exception as e:
+        logger.log("Something went wrong while trying to verify the header %e", e)
+
 
 
 @app.route('/api/users/<doublename>/deviceid', methods=['PUT'])
@@ -313,7 +328,7 @@ def remove_device_id(doublename):
             if data:
                 data = json.loads(data.decode("utf-8"))
                 logger.debug(data)
-                if(data["intention"] == "delete-deviceid"):
+                if(data["intention"] == "delete_deviceid"):
                     logger.debug("intention good!")
                     timestamp = data["timestamp"]
                     logger.debug("Timestamp!")
