@@ -145,44 +145,44 @@ def flag_handler():
     login_attempt = db.getAuthByStateHash(conn, body.get('hash'))
     user = db.getUserByName(conn, login_attempt[0])
     if login_attempt and user:
-        if body.get('isSigned') is None:
-            update_sql = "UPDATE users SET device_id=?  WHERE device_id=?;"
-            db.update_user(conn, update_sql, '', body.get('deviceId'))
-            user = db.getUserByName(conn, login_attempt[0])
-            update_sql = "UPDATE auth SET scanned=?, data=?  WHERE double_name=?;"
-            db.update_auth(conn, update_sql, 1, '', login_attempt[0])
-            update_sql = "UPDATE users SET device_id =?  WHERE double_name=?;"
-            db.update_user(conn, update_sql, body.get(
-                'deviceId'), login_attempt[0])
+        # if body.get('isSigned') is None:
+        #     update_sql = "UPDATE users SET device_id=?  WHERE device_id=?;"
+        #     db.update_user(conn, update_sql, '', body.get('deviceId'))
+        #     user = db.getUserByName(conn, login_attempt[0])
+        #     update_sql = "UPDATE auth SET scanned=?, data=?  WHERE double_name=?;"
+        #     db.update_auth(conn, update_sql, 1, '', login_attempt[0])
+        #     update_sql = "UPDATE users SET device_id =?  WHERE double_name=?;"
+        #     db.update_user(conn, update_sql, body.get(
+        #         'deviceId'), login_attempt[0])
 
-            sio.emit('scannedFlag', {'scanned': True}, room=user[1])
+        #     sio.emit('scannedFlag', {'scanned': True}, room=user[1])
+        #     return Response("Ok")
+        # else:
+        try:
+            public_key = base64.b64decode(user[3])
+            signed_device_id = base64.b64decode(body.get('deviceId'))
+            bytes_signed_device_id = bytes(signed_device_id)
+            verify_key = nacl.signing.VerifyKey(
+                public_key.hex(), encoder=nacl.encoding.HexEncoder)
+            verified_device_id = verify_key.verify(bytes_signed_device_id)
+            if verified_device_id:
+                verified_device_id = verified_device_id.decode("utf-8")
+
+                update_sql = "UPDATE users SET device_id=?  WHERE device_id=?;"
+                db.update_user(conn, update_sql, '', verified_device_id)
+
+                update_sql = "UPDATE auth SET scanned=?, data=?  WHERE double_name=?;"
+                db.update_auth(conn, update_sql, 1, '', login_attempt[0])
+
+                update_sql = "UPDATE users SET device_id =?  WHERE double_name=?;"
+                db.update_user(conn, update_sql,
+                                verified_device_id, login_attempt[0])
+
+                sio.emit('scannedFlag', {'scanned': True}, room=user[1])
             return Response("Ok")
-        else:
-            try:
-                public_key = base64.b64decode(user[3])
-                signed_device_id = base64.b64decode(body.get('deviceId'))
-                bytes_signed_device_id = bytes(signed_device_id)
-                verify_key = nacl.signing.VerifyKey(
-                    public_key.hex(), encoder=nacl.encoding.HexEncoder)
-                verified_device_id = verify_key.verify(bytes_signed_device_id)
-                if verified_device_id:
-                    verified_device_id = verified_device_id.decode("utf-8")
-
-                    update_sql = "UPDATE users SET device_id=?  WHERE device_id=?;"
-                    db.update_user(conn, update_sql, '', verified_device_id)
-
-                    update_sql = "UPDATE auth SET scanned=?, data=?  WHERE double_name=?;"
-                    db.update_auth(conn, update_sql, 1, '', login_attempt[0])
-
-                    update_sql = "UPDATE users SET device_id =?  WHERE double_name=?;"
-                    db.update_user(conn, update_sql,
-                                   verified_device_id, login_attempt[0])
-
-                    sio.emit('scannedFlag', {'scanned': True}, room=user[1])
-                return Response("Ok")
-            except Exception as e:
-                logger.debug("Exception: %s", e)
-                return Response("Sinature invalid", status=400)
+        except Exception as e:
+            logger.debug("Exception: %s", e)
+            return Response("Sinature invalid", status=400)
     else:
         return Response('User not found', status=404)
 
@@ -227,7 +227,17 @@ def get_attempts_handler(doublename):
                     difference = (int(timestamp) - int(current_timestamp)) / 1000
                     if difference < 30:
                         logger.debug("Verification succeeded.")
-                        # More code here.
+                        login_attempt = db.getAuthByDoubleName(conn, doublename)
+                        if (login_attempt is not None):
+                            logger.debug("Login attempt %s", login_attempt)
+                            response = app.response_class(
+                                response=json.dumps(json.loads(login_attempt[5])),
+                                mimetype='application/json'
+                            )
+                            return response
+                        else:
+                            logger.debug("No login attempts found")
+                            return Response("No login attempts found", status=204)
                     else:
                         logger.debug("Signed timestamp inside the header has expired")
                         # return Response("Signed timestamp inside the header has expired", status=400)
@@ -243,17 +253,7 @@ def get_attempts_handler(doublename):
         logger.debug("Something went wrong while trying to verify the header %e", e)
         # return Response("Something went wrong while trying to verify the header", status=400)
 
-    login_attempt = db.getAuthByDoubleName(conn, doublename)
-    if (login_attempt is not None):
-        logger.debug("Login attempt %s", login_attempt)
-        response = app.response_class(
-            response=json.dumps(json.loads(login_attempt[5])),
-            mimetype='application/json'
-        )
-        return response
-    else:
-        logger.debug("No login attempts found")
-        return Response("No login attempts found", status=204)
+    
 
 
 @app.route('/api/verify', methods=['POST'])
