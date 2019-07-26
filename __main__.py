@@ -263,7 +263,6 @@ def verify_handler():
     logger.debug("Verify %s", body)
     user = db.getUserByName(conn, body.get('username'))
     login_attempt = db.getAuthByStateHash(conn, body.get('hash'))
-
     try: 
         if user and login_attempt:
             requested_datetime = datetime.strptime(
