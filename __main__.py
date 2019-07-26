@@ -91,10 +91,11 @@ def login_handler(data):
         user = db.getUserByName(conn, data.get('doubleName').lower())
         push_service.notify_single_device(registration_id=user[4], message_title='Finish login',
                                           message_body='Tap to finish login', data_message=data, click_action='FLUTTER_NOTIFICATION_CLICK', tag='testLogin', collapse_key='testLogin' )
-    print('')
+
     insert_auth_sql = "INSERT INTO auth (double_name,state_hash,timestamp,scanned,data) VALUES (?,?,?,?,?);"
     db.insert_auth(conn, insert_auth_sql, data.get('doubleName').lower(
     ), data.get('state'), datetime.now(), 0, json.dumps(data))
+    print('')
 
 
 @sio.on('resend')
@@ -382,7 +383,7 @@ def get_user_handler(doublename):
 def cancel_login_attempt(doublename):
     user = db.getUserByName(conn, doublename.lower())
     db.delete_auth_for_user(conn, doublename.lower())
-    print('Cancelling')
+    
     sio.emit('cancelLogin', {'scanned': True}, room=user[1])
     return Response('Canceled by User')
 
