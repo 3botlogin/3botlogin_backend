@@ -289,7 +289,22 @@ def verify_handler():
     except Exception as e:
         logger.log("Something went wrong while trying to verify the header %e", e)
 
+@app.route('/api/mobileregistration', methods=['POST'])
+def mobile_registration_handler():
+    body = request.get_json()
+    double_name = body.get('doubleName').lower()
+    sid = body.get('sid')
+    email = body.get('email')
+    public_key = body.get('public_key')
 
+    if double_name == None or email == None or public_key == None or sid == None:
+        return Response("Missing data", status=400)
+    else:
+        user = db.getUserByName(conn, double_name)
+        if user is None:
+            update_sql = "INSERT into users (double_name, sid, email, public_key) VALUES(?,?,?,?);"
+            db.insert_user(conn, update_sql, double_name, sid, email, public_key)
+        return Response("Succes", status=200)
 
 @app.route('/api/users/<doublename>/deviceid', methods=['PUT'])
 def update_device_id(doublename):
