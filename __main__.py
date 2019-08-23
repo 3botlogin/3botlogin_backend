@@ -452,7 +452,7 @@ def save_derived_public_key():
 
 @app.route('/api/minversion', methods=['get'])
 def min_version_handler():
-    return Response('16')
+    return Response('27')
 
 
 def verify_signed_data(double_name, data):
