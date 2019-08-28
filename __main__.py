@@ -143,22 +143,17 @@ def force_refetch_handler():
 def flag_handler():
     body = request.get_json()
     logger.debug("Flag %s", body)
-    login_attempt = db.getAuthByStateHash(conn, body.get('hash'))
-    user = db.getUserByName(conn, login_attempt[0])
-    if login_attempt and user:
-        # if body.get('isSigned') is None:
-        #     update_sql = "UPDATE users SET device_id=?  WHERE device_id=?;"
-        #     db.update_user(conn, update_sql, '', body.get('deviceId'))
-        #     user = db.getUserByName(conn, login_attempt[0])
-        #     update_sql = "UPDATE auth SET scanned=?, data=?  WHERE double_name=?;"
-        #     db.update_auth(conn, update_sql, 1, '', login_attempt[0])
-        #     update_sql = "UPDATE users SET device_id =?  WHERE double_name=?;"
-        #     db.update_user(conn, update_sql, body.get(
-        #         'deviceId'), login_attempt[0])
+    login_attempt = None
+    user = db.getUserByName(conn, body.get('doubleName'))
 
-        #     sio.emit('scannedFlag', {'scanned': True}, room=user[1])
-        #     return Response("Ok")
-        # else:
+    try:
+        login_attempt = db.getAuthByStateHash(conn, body.get('hash'))
+    except Exception as e:
+        pass
+    
+
+    if user:
+        print("user found")
         try:
             public_key = base64.b64decode(user[3])
             signed_device_id = base64.b64decode(body.get('deviceId'))
@@ -168,22 +163,39 @@ def flag_handler():
             verified_device_id = verify_key.verify(bytes_signed_device_id)
             if verified_device_id:
                 verified_device_id = verified_device_id.decode("utf-8")
-
                 update_sql = "UPDATE users SET device_id=?  WHERE device_id=?;"
                 db.update_user(conn, update_sql, '', verified_device_id)
-
-                update_sql = "UPDATE auth SET scanned=?, data=?  WHERE double_name=?;"
-                db.update_auth(conn, update_sql, 1, '', login_attempt[0])
-
-                update_sql = "UPDATE users SET device_id =?  WHERE double_name=?;"
-                db.update_user(conn, update_sql,
-                                verified_device_id, login_attempt[0])
 
                 sio.emit('scannedFlag', {'scanned': True}, room=user[1])
             return Response("Ok")
         except Exception as e:
             logger.debug("Exception: %s", e)
             return Response("Sinature invalid", status=400)
+
+        if login_attempt:
+            print("login attempt found")
+            if verified_device_id:
+                verified_device_id = verified_device_id.decode("utf-8")
+                update_sql = "UPDATE users SET device_id=?  WHERE device_id=?;"
+                db.update_user(conn, update_sql, '', verified_device_id)
+
+            return Response("Ok")
+    else:
+        print("user not found")
+        return Response('User not found', status=404)
+
+
+@app.route('/api/signRegister', methods=['POST'])
+def signRegisterHandler():
+    print('inside signRegister...')
+    body = request.get_json()
+    user = db.getUserByName(conn, body.get('doubleName'))
+    print(user)
+    if user:
+        sio.emit('signed', {
+            'data': body.get('data'),
+        }, room=user[1])
+        return Response('Ok')
     else:
         return Response('User not found', status=404)
 
@@ -241,7 +253,7 @@ def get_attempts_handler(doublename):
                             return Response("No login attempts found", status=204)
                     else:
                         logger.debug("Signed timestamp inside the header has expired")
-                        # return Response("Signed timestamp inside the header has expired", status=400)
+                        return Response("", status=400)
                 else:
                     logger.debug("Intention was not correct!")
             else:
