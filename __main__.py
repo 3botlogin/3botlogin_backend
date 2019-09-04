@@ -205,7 +205,7 @@ def sign_handler():
             'selectedImageId': body.get('selectedImageId')
         }
 
-        logged.debug('signedData: %s', signedData)
+        logger.debug('signedData: %s', signedData)
 
         sio.emit('signed', signedData, room=user[1])
         return Response("Ok")
