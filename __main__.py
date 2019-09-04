@@ -199,15 +199,15 @@ def sign_handler():
         db.update_auth(conn, update_sql, body.get('signedHash'),
                        json.dumps(body.get('data')), body.get('hash'))
 
-        logger.debug("signedHash: %s", body.get('signedHash'))
-        logger.debug("data: %s", body.get('data'))
-        logger.debug("room: %s", user[1])
-
-        sio.emit('signed', {
+        signedData = {
             'signedHash': body.get('signedHash'),
             'data': body.get('data'),
             'selectedImageId': body.get('selectedImageId')
-        }, room=user[1])
+        }
+
+        logged.debug('signedData: %s', signedData)
+
+        sio.emit('signed', signedData, room=user[1])
         return Response("Ok")
     else:
         return Response("Something went wrong", status=500)
