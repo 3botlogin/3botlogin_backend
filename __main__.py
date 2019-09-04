@@ -198,6 +198,11 @@ def sign_handler():
         update_sql = "UPDATE auth SET singed_statehash =?, data=?  WHERE state_hash=?;"
         db.update_auth(conn, update_sql, body.get('signedHash'),
                        json.dumps(body.get('data')), body.get('hash'))
+
+        logger.debug("signedHash: %s", body.get('signedHash'))
+        logger.debug("data: %s", body.get('data'))
+        logger.debug("room: %s", user[1])
+
         sio.emit('signed', {
             'signedHash': body.get('signedHash'),
             'data': body.get('data'),
