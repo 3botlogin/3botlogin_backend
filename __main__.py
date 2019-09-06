@@ -129,7 +129,7 @@ def force_refetch_handler():
     loggin_attempt = db.getAuthByStateHash(conn, data['hash'])
     logger.debug("Login attempt %s", loggin_attempt)
     if (loggin_attempt != None):
-        data = {"scanned": loggin_attempt[3], "signed": loggin_attempt[4]}
+        data = {"scanned": loggin_attempt[3], "signed": {'signedHash': loggin_attempt[4], 'data': loggin_attempt[5]}}
         response = app.response_class(
             response=json.dumps(data),
             mimetype='application/json'
