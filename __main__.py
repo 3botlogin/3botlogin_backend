@@ -504,9 +504,14 @@ def save_derived_public_key():
         return Response("something went wrong", status=400)
 
 
+@app.route('/api/showapps', methods=['get'])
+def min_version_handler():
+    return Response(False)
+
+
 @app.route('/api/minversion', methods=['get'])
 def min_version_handler():
-    return Response('16')
+    return Response('41')
 
 
 def verify_signed_data(double_name, data):
