@@ -505,8 +505,8 @@ def save_derived_public_key():
 
 
 @app.route('/api/showapps', methods=['get'])
-def min_version_handler():
-    return Response(False)
+def show_apps_handler():
+    return Response('True')
 
 
 @app.route('/api/minversion', methods=['get'])
