@@ -6,7 +6,7 @@ Click==7.0
 cryptography==2.6.1
 entrypoints==0.3
 Flask==1.0.2
-Flask-Cors==3.0.7
+Flask-Cors==3.0.9
 Flask-SocketIO==3.3.2
 idna==2.8
 itsdangerous==1.1.0
